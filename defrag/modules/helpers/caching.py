@@ -14,10 +14,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-class QueryObject:
-    def __init__(self, query: {}):
-        self.context = query
-    
-    def __repr__(self):
-        return "<Query Object>"
+import redis
+import json
+from functools import wraps
+
+r = redis.Redis(host='localhost', port=6379, db=0)
+
+def cache(func):
+    @wraps(func)
+    def wrapper_func(query: QueryObject, *args, **kwargs):                                                                                         
+        if not r.exists(json.dumps(query.context)):
+            result = func(query, *args, **kwargs)
+            r.set(json.dumps(query.context), json.dumps(result))
+            return result
+        else:
+            result = json.loads(r.get(json.dumps(query.context)).decode())
+            return result
+
+    return wrapper_func
 
