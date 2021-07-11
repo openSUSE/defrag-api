@@ -24,3 +24,4 @@ fastapi
 uvicorn[standard]
 redis
 pytest
+requests
