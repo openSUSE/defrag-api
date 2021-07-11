@@ -14,25 +14,24 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import redis
-import json
-from functools import wraps
+from defrag.modules.helpers.caching import cache
 from defrag.modules.helpers import QueryObject
+from defrag import app
+from fastapi.testclient import TestClient
 
-r = redis.Redis(host='localhost', port=6379, db=0)
+@cache
+def dummy_function(query: QueryObject):
+    return {"result": "Nothing"}
 
-def cache(func):
-    @wraps(func)
-    def wrapper_func(query: QueryObject, *args, **kwargs):
-        if not r.exists(json.dumps(query.context)):
-            result = func(query, *args, **kwargs)
-            r.set(json.dumps(query.context), json.dumps(result))
-            result["cached"] = False
-            return result
-        else:
-            result = json.loads(r.get(json.dumps(query.context)).decode())
-            result["cached"] = True
-            return result
+@app.get("/tests/cache")
+async def cache_endpoint():
+    query = QueryObject({"term": "Test"})
+    result = dummy_function(query)
+    return result
 
-    return wrapper_func
-
+def test_cache():
+    client = TestClient(app)
+    response = client.get("/tests/cache")
+    # Do it twice so that it is cached
+    response = client.get("/tests/cache")
+    assert response.json() == {"result": "Nothing", "cached": True}
