@@ -1,3 +1,4 @@
 Pipfile.lock
 Pipfile
 .env
+.vscode/settings.json
