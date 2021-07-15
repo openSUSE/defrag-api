@@ -19,9 +19,7 @@ watchgod = "==0.7"
 websockets = "==9.1"
 PyYAML = "==5.4.1"
 pottery = "*"
-redis = "*"
-pytest = "*"
-pytest-asyncio = "*"
+autopep8 = "*"
 
 [dev-packages]
 
