@@ -18,8 +18,7 @@ from defrag import app
 
 __MOD_NAME__ = "demo"
 
+
 @app.get("/" + __MOD_NAME__ + "/")
 async def root():
     return {"message": "Demo module is working!"}
-
-
