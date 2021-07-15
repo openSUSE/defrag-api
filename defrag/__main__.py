@@ -14,10 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+from typing import Dict
 import uvicorn
 import importlib
 from defrag.modules import ALL_MODULES
 from defrag import app, LOGGER
+from defrag.modules.db import RedisPool, test_RedisPool
 
 IMPORTED = {}
 
@@ -37,8 +39,18 @@ def main() -> None:
                 "Can't have two modules with the same name! Please change one")
 
 
+@app.on_event("startup")
+async def tests_on_startup() -> None:
+    test_RedisPool()
+
+
+@app.on_event("shutdown")
+async def tests_on_shutdown() -> None:
+    RedisPool.close_pool()
+
+
 @app.get("/")
-async def root():
+async def root() -> Dict[str, str]:
     return {"message": "Hello World"}
 
 
