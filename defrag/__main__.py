@@ -22,7 +22,7 @@ from defrag import app, LOGGER
 IMPORTED = {}
 
 
-def main():
+def main() -> None:
     for module_name in ALL_MODULES:
         imported_module = importlib.import_module(
             "defrag.modules." + module_name)
