@@ -41,31 +41,50 @@ def test_compose():
     assert res == 5
 
 
-def make_transducer(transformer, reducer, baseCase) -> Callable:
+def base_step(acc, val):
+    acc.append(val)
+    return acc
+
+
+def make_xform(*reducers: Tuple[Callable]) -> Callable:
+    def inner(step):
+        res = step
+        for reduc in reducers:
+            res = reduc(res)
+        return res
+    return inner
+
+
+def make_transducer(xform: Callable, step: Callable, folder: List[Any] = []) -> Callable:
+    """ The composition of functions as 'xform' applies right to left. See test below. """
     def transducer(seq):
-        return reduce(transformer(reducer), seq, baseCase)
+        return reduce(xform(step), seq, folder)
     return transducer
 
 
 def test_make_transducer():
 
-    def step(acc, val):
-        acc.append(val)
-        return acc
-
-    def low3(acc, val):
-        if val < 3:
-            return step(acc, val)
-        return acc
-
-    def inc(step):
+    def to_str(_step):
         def inner(acc, val):
-            return step(acc, val+1)
+            return _step(acc, str(val))
         return inner
 
-    transducer = make_transducer(inc, low3, [])
+    def low3(_step):
+        def inner(acc, val):
+            if val < 3:
+                return _step(acc, val)
+            return acc
+        return inner
+
+    def inc1(_step):
+        def inner(acc, val):
+            return _step(acc, val+1)
+        return inner
+
+    xform = make_xform(to_str, low3, inc1)
+    transducer = make_transducer(xform, base_step, [])
     res = transducer([0, 1, 2])
-    assert res == [1, 2]
+    assert res == ["1", "2"]
 
 
 test_compose()
