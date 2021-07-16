@@ -15,7 +15,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 from functools import reduce
-from typing import Any, Callable, Tuple
+from typing import Any, Callable, List, Tuple
 
 __MOD_NAME__ = "utils"
 
@@ -24,13 +24,49 @@ Some utilities for doing data manipulation.
 """
 
 
-def composeFrom(seed: Any, *funcs: Callable) -> Any:
-    def inner(acc: Tuple[Callable], f: Callable) -> Any:
+def compose(*funcs: Tuple[Callable]) -> Callable:
+    def step(acc, f):
         return f(acc)
-    return reduce(inner, funcs, seed)
+
+    def inner(seed):
+        return reduce(step, funcs, seed)
+    return inner
 
 
-def test_composeFrom() -> None:
-    def inc(x): return x+1
-    def double(x): return x*2
-    assert composeFrom(0, inc, double) == 2
+def test_compose():
+    def inc(x): return x*2
+    def double(x): return x+3
+    func = compose(inc, double)
+    res = func(1)
+    assert res == 5
+
+
+def make_transducer(transformer, reducer, baseCase) -> Callable:
+    def transducer(seq):
+        return reduce(transformer(reducer), seq, baseCase)
+    return transducer
+
+
+def test_make_transducer():
+
+    def step(acc, val):
+        acc.append(val)
+        return acc
+
+    def low3(acc, val):
+        if val < 3:
+            return step(acc, val)
+        return acc
+
+    def inc(step):
+        def inner(acc, val):
+            return step(acc, val+1)
+        return inner
+
+    transducer = make_transducer(inc, low3, [])
+    res = transducer([0, 1, 2])
+    assert res == [1, 2]
+
+
+test_compose()
+test_make_transducer()
