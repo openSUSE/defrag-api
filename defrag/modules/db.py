@@ -30,10 +30,10 @@ class RedisPool:
 
     pool: Optional[BlockingConnectionPool] = init_pool()
 
-    @staticmethod
-    def close_pool() -> None:
-        RedisPool.pool.disconnect()
-        RedisPool.pool = None
+    @classmethod
+    def close_pool(cls) -> None:
+        cls.pool.disconnect()
+        cls.pool = None
 
     """
     Pipelines allow for chaining multiple requests and and running them atomically, i.e. so that
@@ -41,7 +41,7 @@ class RedisPool:
     """
 
     def __init__(self, pipeline: bool = False) -> None:
-        connector = Redis(connection_pool=RedisPool.pool)
+        connector = Redis(connection_pool=self.pool)
         if pipeline:
             self.connection = connector.pipeline()
         else:
