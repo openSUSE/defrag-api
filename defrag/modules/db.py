@@ -21,19 +21,25 @@ different connection scenarios.)
 
 class RedisPool:
 
-    def init_pool() -> BlockingConnectionPool:
-        return BlockingConnectionPool(
-            host=env["REDIS_HOST"],
-            port=env["REDIS_PORT"],
-            password=env["REDIS_PWD"],
-        )
-
-    pool: Optional[BlockingConnectionPool] = init_pool()
+    pool: Optional[BlockingConnectionPool] = None
 
     @classmethod
-    def close_pool(cls) -> None:
-        cls.pool.disconnect()
-        cls.pool = None
+    def open_pool(cls) -> None:
+        if not cls.pool:
+            print("Opening pool...")
+            cls.pool = BlockingConnectionPool(
+                host=env["REDIS_HOST"],
+                port=env["REDIS_PORT"],
+                password=env["REDIS_PWD"],
+            )
+
+    @classmethod
+    def drain_pool(cls) -> None:
+        """ Closes all connections with clients immediately. """
+        if cls.pool:
+            print("Draining pool...")
+            cls.pool.disconnect()
+            cls.pool = None
 
     """
     Pipelines allow for chaining multiple requests and and running them atomically, i.e. so that
@@ -41,6 +47,8 @@ class RedisPool:
     """
 
     def __init__(self, pipeline: bool = False) -> None:
+        if not RedisPool.pool:
+            self.open_pool()
         connector = Redis(connection_pool=self.pool)
         if pipeline:
             self.connection = connector.pipeline()
@@ -65,6 +73,7 @@ def test_RedisPool() -> None:
             "utf-8").replace('"', '')
         assert plain_redis == redis_with_pottery == "World"
     print("* thread pool: OK")
+    RedisPool.drain_pool()
     with RedisPool(pipeline=True) as pipeline:
         with pipeline as p:
             p.flushall()
