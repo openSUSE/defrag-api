@@ -24,7 +24,7 @@ class RedisPool:
     pool: Optional[BlockingConnectionPool] = None
 
     @classmethod
-    def open_pool(cls) -> None:
+    def open(cls) -> None:
         if not cls.pool:
             print("Opening pool...")
             cls.pool = BlockingConnectionPool(
@@ -34,7 +34,7 @@ class RedisPool:
             )
 
     @classmethod
-    def drain_pool(cls) -> None:
+    def drain(cls) -> None:
         """ Closes all connections with clients immediately. """
         if cls.pool:
             print("Draining pool...")
@@ -73,7 +73,7 @@ def test_RedisPool() -> None:
             "utf-8").replace('"', '')
         assert plain_redis == redis_with_pottery == "World"
     print("* thread pool: OK")
-    RedisPool.drain_pool()
+    RedisPool.drain()
     with RedisPool(pipeline=True) as pipeline:
         with pipeline as p:
             p.flushall()
