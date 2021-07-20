@@ -14,8 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from asyncio import exceptions
-from typing import Optional
+from typing import Dict, List, Optional
 
 from aiohttp.client import ClientSession
 from defusedxml.ElementTree import fromstring
@@ -53,16 +52,32 @@ class Req:
             await self.close_session()
 
 
+def reddit_rss_parser(reddit_str: str) -> str:
+    root = fromstring(reddit_str)
+    found: List[Dict[str, str]] = []
+    entries = root.findall(".//{http://www.w3.org/2005/Atom}entry")
+    for e in entries:
+        titles = e.findall(".//{http://www.w3.org/2005/Atom}title")
+        found_titles: List[str] = []
+        for t in titles:
+            found_titles.append(t.text)
+        found_links: List[str] = []
+        links = e.findall("{http://www.w3.org/2005/Atom}link")
+        for l in links:
+            found_links.append((l.attrib["href"]))
+        found.append(dict(zip(found_titles, found_links)))
+    return found
+
+
 async def get_reddit_news():
     async with Req("https://www.reddit.com/r/openSUSE/.rss") as response:
-        return await response.text()
-
-
-async def parseIt():
-    res = await get_reddit_news()
-    root = fromstring(res)
-    entries = root.findall(".//{http://www.w3.org/2005/Atom}entry")
-    print(len(entries))
+        try:
+            return reddit_rss_parser(await response.text())
+        except Exception as err:
+            print("Exception while trying to fetch & parse reddit:" + err)
 
 if __name__ == "__main__":
-    asyncio.run(parseIt())
+    async def main():
+        res = await get_reddit_news()
+        print(res)
+    asyncio.run(main())
