@@ -14,10 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from typing import Dict, List, Optional
+from typing import Dict, List, NamedTuple, Optional
 
 from aiohttp.client import ClientSession
 from defusedxml.ElementTree import fromstring
+from collections import namedtuple
 import asyncio
 import aiohttp
 
@@ -57,6 +58,8 @@ def reddit_rss_parser(reddit_str: str) -> str:
     found: List[Dict[str, str]] = []
     entries = root.findall(".//{http://www.w3.org/2005/Atom}entry")
     for e in entries:
+        Reddit_entry: NamedTuple = namedtuple(
+            "Entry", ["title", "url", "updated"])
         titles = e.findall(".//{http://www.w3.org/2005/Atom}title")
         found_titles: List[str] = []
         for t in titles:
@@ -65,11 +68,16 @@ def reddit_rss_parser(reddit_str: str) -> str:
         links = e.findall("{http://www.w3.org/2005/Atom}link")
         for l in links:
             found_links.append((l.attrib["href"]))
-        found.append(dict(zip(found_titles, found_links)))
+        found_updated = []
+        updated = e.findall(".//{http://www.w3.org/2005/Atom}updated")
+        for up in updated:
+            found_updated.append(up.text)
+        zipped = zip(found_titles, found_links, found_updated)
+        found += list(map(Reddit_entry._make, zipped))
     return found
 
 
-async def get_reddit_news():
+async def get_reddit_news() -> str:
     async with Req("https://www.reddit.com/r/openSUSE/.rss") as response:
         try:
             return reddit_rss_parser(await response.text())
