@@ -17,9 +17,13 @@
 name: Run Python Tests
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - dev
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+      -dev
 
 jobs:
   tests:
@@ -36,5 +40,6 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install pytest
       - name: Run tests with pytest
         run: pytest
