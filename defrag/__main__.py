@@ -21,24 +21,27 @@ from defrag import app, LOGGER
 
 IMPORTED = {}
 
+
 def main():
-	for module_name in ALL_MODULES:
-		imported_module = importlib.import_module("defrag.modules." + module_name)
-		if not hasattr(imported_module, "__mod_name__"):
-			imported_module.__mod_name__ = imported_module.__name__
-		LOGGER.debug("Loaded Module {}".format(imported_module.__mod_name__))
-		if not imported_module.__mod_name__.lower() in IMPORTED:
-			IMPORTED[imported_module.__mod_name__.lower()] = imported_module
-		else:
-			raise Exception("Can't have two modules with the same name! Please change one") # NO_TWO_MODULES
-	
+    for module_name in ALL_MODULES:
+        imported_module = importlib.import_module(
+            "defrag.modules." + module_name)
+        if not hasattr(imported_module, "__mod_name__"):
+            imported_module.__mod_name__ = imported_module.__name__
+        LOGGER.debug("Loaded Module {}".format(imported_module.__mod_name__))
+        if not imported_module.__mod_name__.lower() in IMPORTED:
+            IMPORTED[imported_module.__mod_name__.lower()] = imported_module
+        else:
+            # NO_TWO_MODULES
+            raise Exception(
+                "Can't have two modules with the same name! Please change one")
+
+
 @app.get("/")
 async def root():
-	return {"message": "Hello World"}
+    return {"message": "Hello World"}
 
 
 if __name__ == "__main__":
-	main()
-	uvicorn.run(app, host="0.0.0.0", port=8000)
-	
-
+    main()
+    uvicorn.run(app, host="0.0.0.0", port=8000)

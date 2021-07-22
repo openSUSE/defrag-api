@@ -1,1 +1,5 @@
+.env
 .vscode/settings.json
+Pipfile
+Pipfile.lock
+Pipfile

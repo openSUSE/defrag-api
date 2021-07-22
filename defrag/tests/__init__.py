@@ -13,12 +13,3 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
-
-from defrag import app
-
-__MOD_NAME__ = "demo"
-
-
-@app.get("/" + __MOD_NAME__ + "/")
-async def root():
-    return {"message": "Demo module is working!"}
