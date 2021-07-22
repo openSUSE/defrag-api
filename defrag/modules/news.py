@@ -90,9 +90,7 @@ async def autorefresh() -> None:
             return
         if now - my_reddis_news_cache["last_updated"] > my_reddis_news_cache["delta"]:
             fresher = list(filter(lambda x: x > q[0], entries))
-            for i in fresher:
-                q.appendLeft(i)
-                q.pop()
+            q.extendleft(fresher)
             my_reddis_news_cache["entries"] = q
             my_reddis_news_cache["last_updated"] = now
             print(f"Autorefreshed {len(fresher)} entries from r/openSUSE/.rss")
