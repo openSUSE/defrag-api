@@ -8,17 +8,30 @@
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+from defrag.modules.helpers.caching import cache
+from defrag.modules.helpers import QueryObject
 from defrag import app
+from fastapi.testclient import TestClient
 
-__MOD_NAME__ = "demo"
+@cache
+def dummy_function(query: QueryObject):
+    return {"result": "Nothing"}
 
+@app.get("/tests/cache")
+async def cache_endpoint():
+    query = QueryObject({"term": "Test"})
+    result = dummy_function(query)
+    return result
 
-@app.get("/" + __MOD_NAME__ + "/")
-async def root():
-    return {"message": "Demo module is working!"}
+def test_cache():
+    client = TestClient(app)
+    response = client.get("/tests/cache")
+    # Do it twice so that it is cached
+    response = client.get("/tests/cache")
+    assert response.json() == {"result": "Nothing", "cached": True}
