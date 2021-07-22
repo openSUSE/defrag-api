@@ -14,15 +14,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from typing import Dict, List, NamedTuple, Optional
-
+from typing import List, NamedTuple, Optional, Tuple
 from aiohttp.client import ClientSession
-from defusedxml.ElementTree import fromstring
-from collections import namedtuple
+from datetime import datetime, timedelta
+from collections import namedtuple, deque
+from operator import attrgetter
+import atoma
 import asyncio
 import aiohttp
 
 __MOD_NAME__ = "news"
+
+# FIX ME: Replace with real cache
+my_reddis_news_cache = {"entries": None,
+                        "last_updated": None, "delta": timedelta(minutes=5)}
 
 
 class Req:
@@ -39,7 +44,7 @@ class Req:
         if cls.session and not cls.session.closed:
             await cls.session.close()
 
-    def __init__(self, url, closeOnExit=True):
+    def __init__(self, url: str, closeOnExit: bool = True):
         if not self.session:
             self.open_session()
         self.url = url
@@ -53,39 +58,47 @@ class Req:
             await self.close_session()
 
 
-def reddit_rss_parser(reddit_str: str) -> str:
-    root = fromstring(reddit_str)
-    found: List[Dict[str, str]] = []
-    entries = root.findall(".//{http://www.w3.org/2005/Atom}entry")
-    for e in entries:
-        Reddit_entry: NamedTuple = namedtuple(
-            "Entry", ["title", "url", "updated"])
-        titles = e.findall(".//{http://www.w3.org/2005/Atom}title")
-        found_titles: List[str] = []
-        for t in titles:
-            found_titles.append(t.text)
-        found_links: List[str] = []
-        links = e.findall("{http://www.w3.org/2005/Atom}link")
-        for l in links:
-            found_links.append((l.attrib["href"]))
-        found_updated = []
-        updated = e.findall(".//{http://www.w3.org/2005/Atom}updated")
-        for up in updated:
-            found_updated.append(up.text)
-        zipped = zip(found_titles, found_links, found_updated)
-        found += list(map(Reddit_entry._make, zipped))
-    return found
+def reddit_atom_parser(reddit_bytes: bytes) -> Tuple[List[NamedTuple], Optional[datetime]]:
+    feed = atoma.parse_atom_bytes(reddit_bytes)
+    Entry = namedtuple("Entry", ["title", "url", "updated"])
+    entries: List[NamedTuple] = [Entry(e.title.value, e.links[0].href, e.updated)
+                                 for e in feed.entries]
+    return (entries, feed.updated)
 
 
-async def get_reddit_news() -> str:
+async def get_reddit_news() -> Optional[Tuple[List[NamedTuple], Optional[datetime]]]:
     async with Req("https://www.reddit.com/r/openSUSE/.rss") as response:
         try:
-            return reddit_rss_parser(await response.text())
-        except Exception as err:
-            print("Exception while trying to fetch & parse reddit:" + err)
+            if res := reddit_atom_parser(await response.read()):
+                entries, updated = res
+                return (sorted(entries, key=attrgetter("updated"), reverse=True), updated)
+        except Exception as error:
+            print(
+                f"Failed to fetch & parse r/openSUSE/.rss for this reasons: {error}")
+
+
+async def autorefresh() -> None:
+    print("Refreshing cache from with r/openSUSE/.rss now...")
+    now = datetime.now()
+    q = my_reddis_news_cache["entries"]
+    if res := await get_reddit_news():
+        entries, _ = res
+        q = my_reddis_news_cache["entries"]
+        if not q or len(q) == 0:
+            my_reddis_news_cache["entries"] = deque(entries, maxlen=30)
+            my_reddis_news_cache["last_updated"] = now
+            print(f"Autorefreshed {len(entries)} entries from r/openSUSE/.rss")
+            return
+        if now - my_reddis_news_cache["last_updated"] > my_reddis_news_cache["delta"]:
+            fresher = list(filter(lambda x: x > q[0], entries))
+            for i in fresher:
+                q.appendLeft(i)
+                q.pop()
+            my_reddis_news_cache["entries"] = q
+            my_reddis_news_cache["last_updated"] = now
+            print(f"Autorefreshed {len(fresher)} entries from r/openSUSE/.rss")
+    await asyncio.sleep(300)
+    asyncio.create_task(autorefresh())
 
 if __name__ == "__main__":
-    async def main():
-        res = await get_reddit_news()
-        print(res)
-    asyncio.run(main())
+    asyncio.run(autorefresh())
