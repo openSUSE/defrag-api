@@ -23,7 +23,7 @@ import atoma
 import asyncio
 import aiohttp
 
-__MOD_NAME__ = "news"
+__MOD_NAME__ = "reddit_news"
 
 # FIX ME: Replace with real cache
 my_reddis_news_cache = {"entries": None,
