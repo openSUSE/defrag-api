@@ -83,7 +83,6 @@ async def autorefresh() -> None:
     q = my_reddis_news_cache["entries"]
     if res := await get_reddit_news():
         entries, _ = res
-        q = my_reddis_news_cache["entries"]
         if not q or len(q) == 0:
             my_reddis_news_cache["entries"] = deque(entries, maxlen=30)
             my_reddis_news_cache["last_updated"] = now
