@@ -19,7 +19,6 @@ import uvicorn
 import importlib
 from defrag.modules import ALL_MODULES
 from defrag import app, LOGGER
-from defrag.modules.db import RedisPool, test_RedisPool
 
 IMPORTED = {}
 
@@ -37,16 +36,6 @@ def main() -> None:
             # NO_TWO_MODULES
             raise Exception(
                 "Can't have two modules with the same name! Please change one")
-
-
-@app.on_event("startup")
-async def tests_on_startup() -> None:
-    test_RedisPool()
-
-
-@app.on_event("shutdown")
-async def tests_on_shutdown() -> None:
-    RedisPool.close_pool()
 
 
 @app.get("/")
