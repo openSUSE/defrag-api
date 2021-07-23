@@ -2,8 +2,6 @@ from os import environ as env
 from typing import Optional, Union
 from redis import Redis, BlockingConnectionPool
 from redis.client import Pipeline
-from pottery import RedisDict
-
 
 """ 
 Using `BlockingConnectionPool` instead of the default
@@ -46,7 +44,7 @@ class RedisPool:
 
     def __init__(self, pipeline: bool = False) -> None:
         if not RedisPool.pool:
-            self.open_pool()
+            self.open()
         connector = Redis(connection_pool=self.pool)
         if pipeline:
             self.connection = connector.pipeline()
@@ -58,27 +56,3 @@ class RedisPool:
 
     def __exit__(self, *args, **kwargs) -> None:
         return None
-
-
-def test_RedisPool() -> None:
-    print("* * * db.py: Testing * * *")
-    with RedisPool() as conn:
-        conn.flushall()
-        helloworld = RedisDict(
-            {"Hello": "World"}, redis=conn, key="helloworld")
-        redis_with_pottery = helloworld["Hello"]
-        plain_redis = conn.hget("helloworld", key=b'"Hello"').decode(
-            "utf-8").replace('"', '')
-        assert plain_redis == redis_with_pottery == "World"
-    print("* thread pool: OK")
-    RedisPool.drain()
-    with RedisPool(pipeline=True) as pipeline:
-        with pipeline as p:
-            p.flushall()
-            p.set("Hello", "World")
-            p.get("Hello")
-            (_, _, res) = p.execute()
-            plain_redis = res.decode("utf-8").replace('"', '')
-            assert plain_redis == "World"
-    print("* pipeline: OK")
-    print("* * * db.py: Tests done * * *")
