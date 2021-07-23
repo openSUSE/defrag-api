@@ -35,6 +35,11 @@ async def send_welcome(message: types.Message):
 async def echo(message: types.Message):
     await message.answer(message.text)
 
+
+async def sendToChannel(bot: Bot):
+    await bot.send_message("@pubchess", "Test")
+
+
 def start_bot():
     bot = Bot(token=env["TELEGRAM_BOT_TOKEN"])
     dp = Dispatcher(bot)
