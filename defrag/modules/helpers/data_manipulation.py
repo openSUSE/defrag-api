@@ -23,20 +23,13 @@ Some utilities for doing data manipulation.
 
 
 def compose(*funcs: Tuple[Callable]) -> Callable:
+    """ Compose multiple functions (left-associative) """
     def step(acc, f):
         return f(acc)
 
     def inner(seed):
         return reduce(step, funcs, seed)
     return inner
-
-
-def test_compose():
-    def inc(x): return x*2
-    def double(x): return x+3
-    func = compose(inc, double)
-    res = func(1)
-    assert res == 5
 
 
 def base_step(acc, val):
@@ -54,36 +47,8 @@ def make_xform(*reducers: Tuple[Callable]) -> Callable:
 
 
 def make_transducer(xform: Callable, step: Callable, folder: List[Any] = []) -> Callable:
-    """ The composition of functions as 'xform' applies right to left. See test below. """
+    """ 'Transduce' over a transformer and a step function into a given folder
+    The composition of functions as 'xform' applies right to left (right-associative). See test below. """
     def transducer(seq):
         return reduce(xform(step), seq, folder)
     return transducer
-
-
-def test_make_transducer():
-
-    def to_str(_step):
-        def inner(acc, val):
-            return _step(acc, str(val))
-        return inner
-
-    def low3(_step):
-        def inner(acc, val):
-            if val < 3:
-                return _step(acc, val)
-            return acc
-        return inner
-
-    def inc1(_step):
-        def inner(acc, val):
-            return _step(acc, val+1)
-        return inner
-
-    xform = make_xform(to_str, low3, inc1)
-    transducer = make_transducer(xform, base_step, [])
-    res = transducer([0, 1, 2])
-    assert res == ["1", "2"]
-
-
-test_compose()
-test_make_transducer()
