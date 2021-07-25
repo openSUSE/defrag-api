@@ -136,7 +136,7 @@ class ServicesManager:
         invalid = [s for s in services if not s in cls.services_names]
         if invalid:
             raise Exception(
-                f"These services are not implemented yet: {invalid}")
+                f"These services is not implemented: {invalid}")
         names = [s.name for s in services]
         cls.services = Services(names, services)
 
@@ -144,7 +144,7 @@ class ServicesManager:
     def add(cls, service: Service) -> None:
         if not service.name in cls.services_names:
              raise Exception(
-                f"This service is not implemented yet: {service.name}")
+                f"This service is not implemented: {service.name}")
         if cls.services:
             cls.services[service.name] = service
         else:
