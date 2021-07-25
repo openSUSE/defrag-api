@@ -14,10 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from defrag.modules.helpers import QueryObject
+"""from defrag.modules.helpers import QueryObject
 from defrag.modules.db.redis import RedisPool
+"""
 from typing import Any, Awaitable, Callable, Dict, List, Optional
-import asyncio
 from pottery import RedisDict, RedisDeque, RedisCounter, RedisList, RedisSet
 import redis
 import json
@@ -111,7 +111,7 @@ class Services(UserDict):
     def __init__(self, names: List[str], services: List[Service]):
         super().__init__(dict(zip(names, services)))
 
-    def __getattr__(self, key):
+    def __getattr__(self, key: str):
         try:
             return self.data[key]
         except KeyError:
@@ -142,6 +142,9 @@ class ServicesManager:
 
     @classmethod
     def add(cls, service: Service) -> None:
+        if not service.name in cls.services_names:
+             raise Exception(
+                f"This service is not implemented yet: {service.name}")
         if cls.services:
             cls.services[service.name] = service
         else:
