@@ -15,8 +15,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
-import pottery
-
 from pottery.deque import RedisDeque
 from defrag.modules.helpers.cache import cache, ServicesManager, Service, Controllers
 from defrag.modules.helpers import QueryObject
@@ -24,7 +22,7 @@ from defrag.modules.db.redis import RedisPool
 from defrag import app
 from fastapi.testclient import TestClient
 import pytest
-"""
+
 @cache
 def dummy_function(query: QueryObject):
     return {"result": "Nothing"}
@@ -41,8 +39,6 @@ def test_cache_decorator():
     # Do it twice so that it is cached
     response = client.get("/tests/cache")
     assert response.json() == {"result": "Nothing", "cached": True}
-"""
-
 
 @pytest.mark.asyncio
 async def test_cache_manager():
