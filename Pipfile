@@ -21,6 +21,7 @@ PyYAML = "==5.4.1"
 pottery = "*"
 redis = "*"
 pytest = "*"
+pytest-asyncio = "*"
 
 [dev-packages]
 

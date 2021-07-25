@@ -30,6 +30,12 @@ class RedisPool:
             )
 
     @classmethod
+    def get(cls, pipeline: bool = False):
+        if not cls.pool:
+            cls.open()
+        return cls(pipeline)
+
+    @classmethod
     def drain(cls) -> None:
         """ Closes all connections with clients immediately. """
         if cls.pool:
@@ -42,14 +48,16 @@ class RedisPool:
     the entire chain either succeeds or fails.
     """
 
-    def __init__(self, pipeline: bool = False) -> None:
+    def __init__(self, pipeline: bool = False, flushOnInit = False) -> None:
         if not RedisPool.pool:
             self.open()
-        connector = Redis(connection_pool=self.pool)
+        redis_conn = Redis(connection_pool=self.pool)
         if pipeline:
-            self.connection = connector.pipeline()
+            self.connection = redis_conn.pipeline()
         else:
-            self.connection = connector
+            self.connection = redis_conn
+        if flushOnInit:
+            self.connection.flushall()
 
     def __enter__(self) -> Union[Redis, Pipeline]:
         return self.connection
