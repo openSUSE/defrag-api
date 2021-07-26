@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from defrag.modules.helpers.cache import cache, CacheMiddleWare
+from defrag.modules.helpers.cache import Strategy, cache, CacheMiddleWare
 from defrag.modules.helpers import QueryObject
 from defrag import app
 import pytest
@@ -44,7 +44,7 @@ def test_cache_decorator():
 @pytest.mark.asyncio
 async def test_cache_middleware():
     query = QueryObject({"Pikachu": "go!"})
-    res_cold_cache = await CacheMiddleWare.runQuery(query)
-    res_warm_cache = await CacheMiddleWare.runQuery(query)
+    res_cold_cache = await CacheMiddleWare.runQuery(query, Strategy("reddis_default", True, False, False, 0, 0))
+    res_warm_cache = await CacheMiddleWare.runQuery(query, Strategy("reddis_default", True, False, False, 0, 0))
     assert res_cold_cache
     assert res_cold_cache == res_warm_cache
