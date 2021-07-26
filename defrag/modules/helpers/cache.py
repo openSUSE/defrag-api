@@ -19,12 +19,13 @@ import json
 from collections import UserDict
 from dataclasses import dataclass
 from functools import wraps
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional, Union
+from pottery.exceptions import KeyExistsError
 
 import redis
 from defrag.modules.db.redis import RedisPool
 from defrag.modules.helpers import QueryObject
-from pottery.dict import RedisDict
+from pottery import RedisDict, RedisDeque, RedisSet
 
 r = redis.Redis(host='localhost', port=6379, db=0)
 
@@ -85,25 +86,63 @@ class QueryResponse(UserDict):
         super().__init__({query: query, result: result})
 
 
+class Cache(UserDict):
+
+    def __init__(self, name, cache: Union[RedisDict, RedisDeque, RedisSet]):
+        super().__init__({name: cache})
+
+    def __getattr__(self, key: str):
+        try:
+            return self.data[key]
+        except KeyError:
+            print(f"No match for this cache name: {key}")
+
+    def __setitem__(self, key: str, item: Union[RedisDict, RedisDeque, RedisSet]) -> None:
+        if not key in self.data:
+            super().__setitem__(key, item)
+        else:
+            raise Exception(
+                f"Cannot add a cacher container twice, yet you tried to add {key}")
+
+    def __getitem__(self, key: str) -> Union[RedisDeque, RedisDict, RedisSet]:
+        return super().__getitem__(key)
+
+
 class CacheMiddleWare:
 
-    cache = RedisDict({}, redis=RedisPool().connection, key="cache_controller")
+    cache = Cache("default", RedisDict(
+        {}, redis=RedisPool().connection, key="default_cache_middleware"))
+
+    @classmethod
+    def get_cache(cls, name: str):
+        if not name in cls.cache:
+            raise KeyError(
+                f"Tried to get cache with a nonexistent name: {name}!")
+        return cls.cache[name]
+
+    @classmethod
+    def add_cache(cls, name: str, cache: RedisDict):
+        if name in cls.cache:
+            raise KeyError(
+                f"Tried to set cache to an existent value with {name}")
+        cls.cache[name] = cache
 
     @staticmethod
     def validate(query: QueryObject) -> Validation:
         return Validation("Go!", [], [])
 
     @staticmethod
-    async def runFallback(query: QueryObject, valid_key: str) -> Any:
+    async def runFallback(query: QueryObject, valid_key: str, strat: Optional[CacheStrategies] = None) -> Any:
         async def callback(query):
-            await asyncio.sleep(3)
+            await asyncio.sleep(1)
             return "Hey, I am mocking fallback's result."
         res = await callback(query)
-        CacheMiddleWare.cache[valid_key] = res
+        if not strat:
+            CacheMiddleWare.cache.default[valid_key] = res
         return res
 
     @staticmethod
-    async def runQuery(query: QueryObject) -> QueryResponse:
+    async def runQuery(query: QueryObject, strat: Optional[CacheStrategies] = None) -> QueryResponse:
         try:
             validation = CacheMiddleWare.validate(query)
             if validation.key and not validation.missing_keys + validation.excessive_keys:
