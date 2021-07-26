@@ -14,14 +14,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from defrag.modules.helpers.caching import cache
+from sys import stdout
+from defrag.modules.helpers.cache import cache, CacheMiddleWare
 from defrag.modules.helpers import QueryObject
 from defrag import app
+import pytest
+import asyncio
 from fastapi.testclient import TestClient
+
 
 @cache
 def dummy_function(query: QueryObject):
     return {"result": "Nothing"}
+
 
 @app.get("/tests/cache")
 async def cache_endpoint():
@@ -29,9 +34,19 @@ async def cache_endpoint():
     result = dummy_function(query)
     return result
 
-def test_cache():
+
+def test_cache_decorator():
     client = TestClient(app)
     response = client.get("/tests/cache")
     # Do it twice so that it is cached
     response = client.get("/tests/cache")
     assert response.json() == {"result": "Nothing", "cached": True}
+
+
+@pytest.mark.asyncio
+async def test_cache_middleware():
+    query = QueryObject({"Pikachu": "go!"})
+    res_cold_cache = await CacheMiddleWare.runQuery(query)
+    res_warm_cache = await CacheMiddleWare.runQuery(query)
+    assert res_cold_cache
+    assert res_cold_cache == res_warm_cache
