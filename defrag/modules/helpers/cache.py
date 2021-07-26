@@ -112,11 +112,11 @@ class CacheMiddleWare:
                 elif res_fallback := await CacheMiddleWare.runFallback(query, validation.key):
                     return QueryResponse(query=query, result=res_fallback)
                 else:
-                    raise Exception(
+                    raise QueryException(
                         f"Unable to find a fallback for this query, which the cache could not satisfy: {str(query)}")
 
             else:
-                raise Exception(
+                raise QueryException(
                     f"Unable to validate your query, check that the following fields are not missing or not in excess: {str(validation.excessive_keys + validation.missing_keys)}")
         except QueryException as err:
             response = QueryResponse(
