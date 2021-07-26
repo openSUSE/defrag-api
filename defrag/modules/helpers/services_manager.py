@@ -64,6 +64,12 @@ class Services(UserDict):
         else:
             raise Exception(
                 f"Cannot add a service twice, yet you tried to add {key}")
+    
+    def __getitem__(self, key: str) -> Service:
+        if not key in self.data:
+            raise Exception(f"Tried to access a nonexistent service: {key}")
+        else:
+            return super().__getitem__(key)
 
 
 class ServicesManager:

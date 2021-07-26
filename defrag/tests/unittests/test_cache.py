@@ -14,12 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from sys import stdout
 from defrag.modules.helpers.cache import cache, CacheMiddleWare
 from defrag.modules.helpers import QueryObject
 from defrag import app
 import pytest
-import asyncio
 from fastapi.testclient import TestClient
 
 
