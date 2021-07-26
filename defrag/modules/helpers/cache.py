@@ -49,18 +49,19 @@ def cache(func):
 
 @dataclass
 class Strategy:
+    key: str
     is_enabled: bool
     populate_on_startup: bool
     auto_refresh: bool
-    # the following int-s are to be understood as seconds
-    cache_decay: Optional[int]
-    fallback_timeout: Optional[int]
+    cache_decay: int    # seconds
+    fallback_timeout: int   # seconds
 
 
 @dataclass
 class CacheStrategies:
     in_memory: Strategy
     redis: Strategy
+    store: Strategy
 
 
 @dataclass
@@ -88,30 +89,31 @@ class QueryResponse(UserDict):
 
 class Cache(UserDict):
 
-    def __init__(self, name, cache: Union[RedisDict, RedisDeque, RedisSet]):
-        super().__init__({name: cache})
-
     def __getattr__(self, key: str):
         try:
             return self.data[key]
         except KeyError:
             print(f"No match for this cache name: {key}")
 
-    def __setitem__(self, key: str, item: Union[RedisDict, RedisDeque, RedisSet]) -> None:
+    def __setitem__(self, key: str, item: Any) -> None:
         if not key in self.data:
-            super().__setitem__(key, item)
+            self.data[key] = item
         else:
-            raise Exception(
+            raise KeyError(
                 f"Cannot add a cacher container twice, yet you tried to add {key}")
 
-    def __getitem__(self, key: str) -> Union[RedisDeque, RedisDict, RedisSet]:
-        return super().__getitem__(key)
+    def __getitem__(self, key: str) -> Any:
+        if not key in self.data:
+            raise KeyError(
+                f"Cannot get cacher {key} as it does not exist in the Cache. Call `Cache.add()` first.")
+        else:
+            return self.data[key]
 
 
 class CacheMiddleWare:
 
-    cache = Cache("default", RedisDict(
-        {}, redis=RedisPool().connection, key="default_cache_middleware"))
+    cache = Cache({"redis_default": RedisDict(
+        {}, redis=RedisPool().connection, key="default_cache_middleware")})
 
     @classmethod
     def get_cache(cls, name: str):
@@ -132,23 +134,28 @@ class CacheMiddleWare:
         return Validation("Go!", [], [])
 
     @staticmethod
-    async def runFallback(query: QueryObject, valid_key: str, strat: Optional[CacheStrategies] = None) -> Any:
+    def fromCache(key, redis_strat: Strategy):
+        cache = CacheMiddleWare.cache[redis_strat.key]
+        return cache[key]
+
+    @staticmethod
+    async def runFallback(query: QueryObject, valid_key: str, strat: Strategy) -> Any:
         async def callback(query):
             await asyncio.sleep(1)
             return "Hey, I am mocking fallback's result."
         res = await callback(query)
-        if not strat:
-            CacheMiddleWare.cache.default[valid_key] = res
+        cache = CacheMiddleWare.cache[strat.key]
+        cache[valid_key] = res
         return res
 
     @staticmethod
-    async def runQuery(query: QueryObject, strat: Optional[CacheStrategies] = None) -> QueryResponse:
+    async def runQuery(query: QueryObject, redis_strat: Strategy) -> QueryResponse:
         try:
             validation = CacheMiddleWare.validate(query)
             if validation.key and not validation.missing_keys + validation.excessive_keys:
                 if validation.key in CacheMiddleWare.cache:
-                    return QueryResponse(query, result=CacheMiddleWare.cache[validation.key])
-                elif res_fallback := await CacheMiddleWare.runFallback(query, validation.key):
+                    return QueryResponse(query, result=CacheMiddleWare.fromCache(validation.key, redis_strat))
+                elif res_fallback := await CacheMiddleWare.runFallback(query, validation.key, redis_strat):
                     return QueryResponse(query=query, result=res_fallback)
                 else:
                     raise QueryException(
