@@ -48,7 +48,7 @@ class RedisPool:
     the entire chain either succeeds or fails.
     """
 
-    def __init__(self, pipeline: bool = False, flushOnInit = False) -> None:
+    def __init__(self, pipeline: bool = False, flushOnInit:bool = False) -> None:
         if not RedisPool.pool:
             self.open()
         redis_conn = Redis(connection_pool=self.pool)

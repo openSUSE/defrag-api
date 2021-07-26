@@ -1,26 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime
 from collections import UserDict
-from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional
-
-
-@dataclass
-class Strategy:
-    is_enabled: bool
-    populate_on_startup: bool
-    auto_refresh: bool
-
-
-@dataclass
-class CacheStrategies:
-    in_memory: Strategy
-    redis: Strategy
-
-
-@dataclass
-class ServiceCacheStrategy:
-    available_strategies: List[CacheStrategies]
-    current_strategy: CacheStrategies
+from typing import Any, Awaitable, Callable, Dict, List, Optional
+from defrag.modules.helpers.cache import CacheMiddleWare, ServiceCacheStrategy
 
 
 @dataclass
@@ -48,7 +30,7 @@ class Service:
     credentials: Optional[Dict[Any, Any]]
     custom_parameters: Optional[Dict[Any, Any]]
     cache_strategy: Optional[ServiceCacheStrategy]
-    cache: Iterable
+    cache: CacheMiddleWare
 
     async def switchOnOff(self, on: bool) -> None:
         try:
@@ -87,8 +69,8 @@ class Services(UserDict):
 class ServicesManager:
 
     services: Optional[Services] = None
-    services_names: List[str] = ["twitter_reddit", "bugzilla", "wikis", "mailing_lists",
-                                 "matrix", "telegram", "pagure", "zypper", "opi", "people", "activities"]
+    services_names = ["twitter_reddit", "bugzilla", "wikis", "mailing_lists",
+                      "matrix", "telegram", "pagure", "zypper", "opi", "people", "activities"]
 
     @classmethod
     def subscribeAll(cls, services: List[Service]) -> None:

@@ -14,9 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-"""from defrag.modules.helpers import QueryObject
+from collections import UserDict
+from dataclasses import dataclass
+from typing import Any, Coroutine, List, NamedTuple, Optional
+import asyncio
+from pottery.dict import RedisDict
+from defrag.modules.helpers import QueryObject
 from defrag.modules.db.redis import RedisPool
-"""
 import redis
 import json
 from functools import wraps
@@ -38,3 +42,89 @@ def cache(func):
             return result
 
     return wrapper_func
+    s
+
+
+@dataclass
+class Strategy:
+    is_enabled: bool
+    populate_on_startup: bool
+    auto_refresh: bool
+    # the following int-s are to be understood as seconds
+    cache_decay: Optional[int]
+    fallback_timeout: Optional[int]
+
+
+@dataclass
+class CacheStrategies:
+    in_memory: Strategy
+    redis: Strategy
+
+
+@dataclass
+class ServiceCacheStrategy:
+    available_strategies: List[CacheStrategies]
+    current_strategy: CacheStrategies
+
+
+class Validation(NamedTuple):
+    key: Optional[str]
+    missing_keys: List[str]
+    excessive_keys: List[str]
+
+    def __getattr__(self, key):
+        return super().__getitem__(key)
+
+
+class QueryException(Exception):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class QueryResponse(UserDict):
+    def __init__(self, query: QueryObject, result: Optional[Any], *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.query = query
+        self.result = result
+
+
+class CacheMiddleWare:
+
+    cache = RedisDict(redis=RedisPool().connection, key="cache_controller")
+
+    @staticmethod
+    def validate(query: QueryObject) -> Validation:
+        return Validation("", [], [])
+
+    @staticmethod
+    async def runFallback(query: QueryObject, valid_key: str) -> Any:
+        async def callback(query):
+            await asyncio.sleep(1)
+            return "OK"
+        res = await callback(query)
+        CacheMiddleWare.cache[valid_key] = res
+        return res
+
+    @staticmethod
+    async def runQuery(query: QueryObject) -> Optional[QueryResponse]:
+        try:
+            validation = CacheMiddleWare.validate(query)
+            if validation.key and not (validation.missing_keys + validation.excessive_keys):
+                if satisfied_by_cache := CacheMiddleWare.cache[validation.key]:
+                    return QueryResponse(query, result=satisfied_by_cache)
+                elif res_fallback := await CacheMiddleWare.runFallback(query, validation.key):
+                    return QueryResponse(query=query, result=res_fallback)
+                else:
+                    raise Exception(
+                        f"Unable to find a fallback for this query, which the cache could not satisfy: {str(query)}")
+            else:
+                raise Exception(
+                    f"Unable to validate your query, check that the following fields are not missing or not in excess: {str(validation.excessive_keys + validation.missing_keys)}")
+        except QueryException as err:
+            response = QueryResponse(
+                query, f"Unable to satisfy this query: {query}")
+            return response
+        except Exception as err:
+            response = QueryResponse(
+                query, f"A likely programming error occurred: {err}, so that we were not able to satisfy this request: {query}")
+            return response
