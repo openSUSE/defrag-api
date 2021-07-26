@@ -14,12 +14,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+"""from defrag.modules.helpers import QueryObject
+from defrag.modules.db.redis import RedisPool
+"""
 import redis
 import json
 from functools import wraps
-from defrag.modules.helpers import QueryObject
 
 r = redis.Redis(host='localhost', port=6379, db=0)
+
 
 def cache(func):
     @wraps(func)
@@ -35,4 +38,3 @@ def cache(func):
             return result
 
     return wrapper_func
-

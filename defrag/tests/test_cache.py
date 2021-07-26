@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from defrag.modules.helpers.caching import cache
+from defrag.modules.helpers.cache import cache
 from defrag.modules.helpers import QueryObject
 from defrag import app
 from fastapi.testclient import TestClient
@@ -29,7 +29,7 @@ async def cache_endpoint():
     result = dummy_function(query)
     return result
 
-def test_cache():
+def test_cache_decorator():
     client = TestClient(app)
     response = client.get("/tests/cache")
     # Do it twice so that it is cached
