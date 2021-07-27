@@ -1,9 +1,5 @@
-from typing import Any, Awaitable, Coroutine, Optional
+from typing import Any, Optional
 from aiohttp import ClientSession
-import asyncio
-
-from aiohttp.client_reqrep import ClientResponse
-
 
 class Req:
 
