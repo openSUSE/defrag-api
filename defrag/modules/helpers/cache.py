@@ -15,6 +15,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import json
+from pottery.annotations import JSONTypes
+import redis
 from collections import UserDict
 from dataclasses import dataclass
 from functools import wraps
@@ -48,7 +50,11 @@ def cache(func):
 
 @dataclass
 class RedisCacheStrategy:
-    reddis_key: str
+    # The name of the key in memory and in Reddis where the object equipped with the strategy is going to be cached.
+    redis_key: str
+    # The async function used by the object required with the strategy to refresh its cache.
+    refresher: Callable
+    # Whether we should populate the cache ('warm-up') when (re)booting.
     populate_on_startup: bool
     auto_refresh: bool
     runner: Callable
@@ -120,36 +126,61 @@ class Cache(UserDict):
 
 
 class CacheMiddleWare:
+    """ The rationale for this class is that the main functions exposed by `pottery`:
+    1. don't offer a fine-grained way to refresh the cache on cache misses.
+    2. don't offer reusable, customizable containers for caching. For example `redis_cache` shoves everything down the same unique cache, while we
+    sometimes would prefer different caches for different services depending on their use and on the data strutures they naturally suggest.
+    The approach I am proposing here is, in a nutshell, a factory which allows us to initialize each service with a separate cache container(s) and 
+    caching 'strategy'. For illustration I am initializing by default with a RedisDict-based cache. 
 
-    cache_keys = Cache({"redis_default": RedisDict(
-        {}, redis=RedisPool().connection, key="default_cache_middleware")})
+    TODO:
+        - adapt the class to be used from FastAPI `BackgroundTasks` and `Dependency`
+        - make factory for workers (if BackgroundTasks be used to consume RedisCacheStrategy.auto_refresh and if that's useful)
+        - implement restoration/cache warmup and more generally consider using a backup DB. 
+    """
+
+    cache_services = Cache({"redis_default": RedisDict(
+        {}, redis=RedisPool().connection, key="redis_default")})
 
     @classmethod
-    def get_cache(cls, name: str):
-        if not name in cls.cache_keys:
+    def get_cache(cls, service_key: str) -> Cache:
+        if not service_key in cls.cache_services:
             raise KeyError(
-                f"Tried to get cache with a nonexistent name: {name}!")
-        return cls.cache_keys[name]
+                f"Tried to get cache with a nonexistent name: {service_key}!")
+        return cls.cache_services[service_key]
 
     @classmethod
-    def add_cache(cls, name: str, cache: RedisDict):
-        if name in cls.cache_keys:
+    @as_async_callback
+    def set_service_cache(cls, service_key: str, key: str, val: Any) -> None:
+        """ The 'as_async_callback` decorator above allows us to run this function as async but without waiting for it.
+        (Remember that assignments to RedisDict are blocking.)
+        My hope is to be able to return sooner from the caller. """
+        cls.cache_services[service_key][key] = val
+
+    @classmethod
+    def add_cache(cls, name: str, cache: RedisDict) -> None:
+        if name in cls.cache_services:
             raise KeyError(
                 f"Tried to set cache to an existent value with {name}")
-        cls.cache_keys[name] = cache
+        cls.cache_services[name] = cache
 
     @staticmethod
     def validate(query: QueryObject) -> Validation:
-        keys = list(query.context.keys())
-        key_first = keys[0]
-        return Validation(query.context[key_first], [], [])
+        keys = list(query.context.values())
+        val = keys[0]
+        return Validation(val, [], [])
 
     @staticmethod
-    async def evaluate(validKey: str, strat: RedisCacheStrategy) -> Any:
-        if not validKey in CacheMiddleWare.cache_keys:
-            res = await strat.runner(validKey)
-            CacheMiddleWare.cache_keys[validKey] = res
-        return CacheMiddleWare.cache_keys[validKey]
+    async def runCacheStrategy(validKey: str, strat: RedisCacheStrategy) -> Any:
+        """More could be done here than just refreshing. We could inspect other attributes from RedisCacheStrategy 
+        and use timeouts and clean-ups."""
+        cache = CacheMiddleWare.get_cache(strat.redis_key)
+        if validKey in cache:
+            return cache[validKey]
+        val = await strat.refresher(validKey)
+        CacheMiddleWare.set_service_cache(
+            strat.redis_key, validKey, val)
+        return val
 
     @staticmethod
     async def runQuery(query: QueryObject, redis_strat: RedisCacheStrategy) -> QueryResponse:
