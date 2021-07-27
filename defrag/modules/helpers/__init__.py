@@ -20,4 +20,3 @@ class QueryObject:
     
     def __repr__(self):
         return "<Query Object>"
-

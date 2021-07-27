@@ -19,6 +19,7 @@ from defrag.modules.helpers.cache import RedisCacheStrategy, cache, CacheMiddleW
 from defrag.modules.helpers import QueryObject
 from defrag import app
 import pytest
+import sys
 from fastapi.testclient import TestClient
 
 
@@ -44,13 +45,13 @@ def test_cache_decorator():
 
 @pytest.mark.asyncio
 async def test_cache_middleware():
-    query = QueryObject({"search": "Pikachu"})
+    query = QueryObject({"Pikachu": "go!"})
 
     async def refresher(s: str) -> str:
-        return (f" Called with {s}")
-    res_cold_cache = await CacheMiddleWare.runQuery(query, RedisCacheStrategy("redis_default", refresher, False, False, 0, 0, 0))
+        return (f" Called with {s}") 
+    res_cold_cache = await CacheMiddleWare.runQuery(query, RedisCacheStrategy("reddis_default", refresher, False, False, 0, 0, 0))
     await asyncio.sleep(1)
-    res_warm_cache = await CacheMiddleWare.runQuery(query, RedisCacheStrategy("redis_default", refresher, False, False, 0, 0, 0))
+    res_warm_cache = await CacheMiddleWare.runQuery(query, RedisCacheStrategy("reddis_default", refresher, False, False, 0, 0, 0))
     sys.stdout.write(str(res_cold_cache))
     sys.stdout.write(str(res_warm_cache))
     assert res_cold_cache
