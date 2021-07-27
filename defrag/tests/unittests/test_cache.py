@@ -45,8 +45,14 @@ def test_cache_decorator():
 
 @pytest.mark.asyncio
 async def test_cache_middleware():
-    query = QueryObject({"Pikachu": "go!"})
-    res_cold_cache = await CacheMiddleWare.runQuery(query)
-    res_warm_cache = await CacheMiddleWare.runQuery(query)
+    query = QueryObject({"search": "Pikachu"})
+
+    async def refresher(s: str) -> str:
+        return (f" Called with {s}")
+    res_cold_cache = await CacheMiddleWare.runQuery(query, RedisCacheStrategy("redis_default", refresher, False, False, 0, 0, 0))
+    await asyncio.sleep(1)
+    res_warm_cache = await CacheMiddleWare.runQuery(query, RedisCacheStrategy("redis_default", refresher, False, False, 0, 0, 0))
+    sys.stdout.write(str(res_cold_cache))
+    sys.stdout.write(str(res_warm_cache))
     assert res_cold_cache
     assert res_cold_cache == res_warm_cache
