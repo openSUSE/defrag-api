@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+from typing import Dict
 import uvicorn
 import importlib
 from defrag.modules import ALL_MODULES
@@ -22,7 +23,7 @@ from defrag import app, LOGGER
 IMPORTED = {}
 
 
-def main():
+def main() -> None:
     for module_name in ALL_MODULES:
         imported_module = importlib.import_module(
             "defrag.modules." + module_name)
@@ -38,7 +39,7 @@ def main():
 
 
 @app.get("/")
-async def root():
+async def root() -> Dict[str, str]:
     return {"message": "Hello World"}
 
 
