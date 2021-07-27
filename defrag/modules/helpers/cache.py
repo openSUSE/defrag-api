@@ -14,18 +14,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import asyncio
 import json
 from collections import UserDict
 from dataclasses import dataclass
 from functools import wraps
-from typing import Any, Dict, List, Optional, Union
-from pottery.exceptions import KeyExistsError
+from sys import stdout
+from typing import Any, Callable, List, Optional
 
 import redis
 from defrag.modules.db.redis import RedisPool
 from defrag.modules.helpers import QueryObject
-from pottery import RedisDict, RedisDeque, RedisSet
+from pottery import RedisDict
 
 r = redis.Redis(host='localhost', port=6379, db=0)
 
@@ -48,26 +47,36 @@ def cache(func):
 
 
 @dataclass
-class Strategy:
-    key: str
-    is_enabled: bool
+class RedisCacheStrategy:
+    reddis_key: str
     populate_on_startup: bool
     auto_refresh: bool
-    cache_decay: int    # seconds
-    fallback_timeout: int   # seconds
+    runner: Callable
+    runner_timeout: Optional[int]   # seconds
+    cache_decay: Optional[int]    # seconds
+
+
+class InMemoryCacheStrategy:
+    def __init__(self, *args, **kwargs):
+        raise Exception("Not implemented 'InMemoryCacheStrategy")
+
+
+class StoreCacheStrategy:
+    def __init__(self, *args, **kwargs):
+        raise Exception("Not implement 'InMemoryCacheStrategy")
 
 
 @dataclass
-class CacheStrategies:
-    in_memory: Strategy
-    redis: Strategy
-    store: Strategy
+class CacheStrategy:
+    in_memory: Optional[InMemoryCacheStrategy]
+    redis: Optional[RedisCacheStrategy]
+    store: Optional[StoreCacheStrategy]
 
 
 @dataclass
 class ServiceCacheStrategy:
-    available_strategies: List[CacheStrategies]
-    current_strategy: CacheStrategies
+    available_strategies: List[CacheStrategy]
+    current_strategy: CacheStrategy
 
 
 @dataclass
@@ -112,58 +121,47 @@ class Cache(UserDict):
 
 class CacheMiddleWare:
 
-    cache = Cache({"redis_default": RedisDict(
+    cache_keys = Cache({"redis_default": RedisDict(
         {}, redis=RedisPool().connection, key="default_cache_middleware")})
 
     @classmethod
     def get_cache(cls, name: str):
-        if not name in cls.cache:
+        if not name in cls.cache_keys:
             raise KeyError(
                 f"Tried to get cache with a nonexistent name: {name}!")
-        return cls.cache[name]
+        return cls.cache_keys[name]
 
     @classmethod
     def add_cache(cls, name: str, cache: RedisDict):
-        if name in cls.cache:
+        if name in cls.cache_keys:
             raise KeyError(
                 f"Tried to set cache to an existent value with {name}")
-        cls.cache[name] = cache
+        cls.cache_keys[name] = cache
 
     @staticmethod
     def validate(query: QueryObject) -> Validation:
-        return Validation("Go!", [], [])
+        keys = list(query.context.keys())
+        key_first = keys[0]
+        return Validation(query.context[key_first], [], [])
 
     @staticmethod
-    def fromCache(key, redis_strat: Strategy):
-        cache = CacheMiddleWare.cache[redis_strat.key]
-        return cache[key]
+    async def evaluate(validKey: str, strat: RedisCacheStrategy) -> Any:
+        if not validKey in CacheMiddleWare.cache_keys:
+            res = await strat.runner(validKey)
+            CacheMiddleWare.cache_keys[validKey] = res
+        return CacheMiddleWare.cache_keys[validKey]
 
     @staticmethod
-    async def runFallback(query: QueryObject, valid_key: str, strat: Strategy) -> Any:
-        async def callback(query):
-            await asyncio.sleep(1)
-            return "Hey, I am mocking fallback's result."
-        res = await callback(query)
-        cache = CacheMiddleWare.cache[strat.key]
-        cache[valid_key] = res
-        return res
-
-    @staticmethod
-    async def runQuery(query: QueryObject, redis_strat: Strategy) -> QueryResponse:
+    async def runQuery(query: QueryObject, redis_strat: RedisCacheStrategy) -> QueryResponse:
         try:
-            validation = CacheMiddleWare.validate(query)
-            if validation.key and not validation.missing_keys + validation.excessive_keys:
-                if validation.key in CacheMiddleWare.cache:
-                    return QueryResponse(query, result=CacheMiddleWare.fromCache(validation.key, redis_strat))
-                elif res_fallback := await CacheMiddleWare.runFallback(query, validation.key, redis_strat):
-                    return QueryResponse(query=query, result=res_fallback)
-                else:
-                    raise QueryException(
-                        f"Unable to find a fallback for this query, which the cache could not satisfy: {str(query)}")
-
+            valid = CacheMiddleWare.validate(query)
+            stdout.write("Testing validation")
+            if valid.key and not valid.missing_keys + valid.excessive_keys:
+                res = await CacheMiddleWare.evaluate(valid.key, redis_strat)
+                return QueryResponse(query=query, result=res)
             else:
                 raise QueryException(
-                    f"Unable to validate your query, check that the following fields are not missing or not in excess: {str(validation.excessive_keys + validation.missing_keys)}")
+                    f"Unable to validate your query, check that the following fields are not missing or not in excess: {str(valid.excessive_keys + valid.missing_keys)}")
         except QueryException as err:
             response = QueryResponse(
                 query, f"Unable to satisfy this query: {query}")
