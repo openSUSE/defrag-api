@@ -24,6 +24,16 @@ call from the main for CPU-bound computations without blocking the event loop.
 Using 'None' as first parameter will offload the function call to a separate thread.
 """
 
+
+def as_async_callback(f: Callable) -> Callable:
+    @wraps(f)
+    def inner(*args, **kwargs):
+        loop = asyncio.get_running_loop()
+        f_saturated = partial(f, *args, **kwargs)
+        loop.call_soon(f_saturated)
+    return inner
+
+
 def as_async(f: Callable) -> Callable:
     @wraps(f)
     async def inner(*args, **kwargs):

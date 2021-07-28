@@ -14,14 +14,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from defrag.modules.helpers.caching import cache
+import asyncio
+from defrag.modules.helpers.cache import RedisCacheStrategy, cache, CacheMiddleWare
 from defrag.modules.helpers import QueryObject
 from defrag import app
+import pytest
+import sys
 from fastapi.testclient import TestClient
+
 
 @cache
 def dummy_function(query: QueryObject):
     return {"result": "Nothing"}
+
 
 @app.get("/tests/cache")
 async def cache_endpoint():
@@ -29,9 +34,25 @@ async def cache_endpoint():
     result = dummy_function(query)
     return result
 
-def test_cache():
+
+def test_cache_decorator():
     client = TestClient(app)
     response = client.get("/tests/cache")
     # Do it twice so that it is cached
     response = client.get("/tests/cache")
     assert response.json() == {"result": "Nothing", "cached": True}
+
+
+@pytest.mark.asyncio
+async def test_cache_middleware():
+    query = QueryObject({"search": "Pikachu"})
+
+    async def refresher(s: str) -> str:
+        return (f" Called with {s}")
+    res_cold_cache = await CacheMiddleWare.runQuery(query, RedisCacheStrategy("redis_default", refresher, False, False, 0, 0, 0))
+    await asyncio.sleep(1)
+    res_warm_cache = await CacheMiddleWare.runQuery(query, RedisCacheStrategy("redis_default", refresher, False, False, 0, 0, 0))
+    sys.stdout.write(str(res_cold_cache))
+    sys.stdout.write(str(res_warm_cache))
+    assert res_cold_cache
+    assert res_cold_cache == res_warm_cache
