@@ -81,10 +81,13 @@ class ServicesManager:
     services = Services({})
 
     @staticmethod
-    def realize_service_template(templ: ServiceTemplate, store: Store, **init_state_override: Dict[str, Any]) -> Service:
+    def realize_service_template(templ: ServiceTemplate, store: Store, **init_state_override: Optional[Dict[str, Any]]) -> Service:
         now = datetime.now()
-        if not init_state_override:
-            return Service(started_at=now, template=templ, cache_store=store)
+        init_state = {"started_at": now,
+                      "template": templ, "cache_store": store}
+        if init_state_override:
+            init_state = {**init_state, **init_state_override}
+        return Service(**init_state)
 
     @classmethod
     def register_service(cls, name: str, service: Service):
