@@ -175,7 +175,6 @@ class Run:
         try:
             if redis_strat := ServicesManager.services[query.service].template.cache_strategy.redis:
                 async with Run.Cache(query, redis_strat) as result:
-                    pretty_log("Response", str(len(result)))
                     return QueryResponse(query=query, results_count=len(result))
             else:
                 raise QueryException(
