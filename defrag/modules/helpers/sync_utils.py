@@ -41,28 +41,3 @@ def as_async(f: Callable) -> Callable:
         f_saturated = partial(f, *args, **kwargs)
         return await loop.run_in_executor(None, f_saturated)
     return inner
-
-
-@as_async
-def test_as_async(n: int) -> int:
-    return n + 1
-
-
-async def to_async(f: Callable, *args, **kwargs) -> Awaitable:
-    loop = asyncio.get_running_loop()
-    f_saturated = partial(f, *args, **kwargs)
-    return await loop.run_in_executor(None, f_saturated)
-
-
-def test_to_async(n: int) -> int:
-    return n + 1
-
-
-async def test_sync_utils() -> None:
-    _as = await test_as_async(0)
-    _to = await to_async(test_to_async, 0)
-    assert _as == _to == 1
-
-
-if __name__ == "__main__":
-    asyncio.run(test_sync_utils())

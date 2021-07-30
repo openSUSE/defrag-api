@@ -14,38 +14,23 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from typing import Dict, Any, Optional
-from attr import dataclass
-from pydantic.main import BaseModel
+from defrag.modules.news_reddit_twitter import RedditStore, TwitterStore
+import pytest
+from sys import stdout
+
+@pytest.mark.asyncio
+async def test_redit():
+    res = await RedditStore.fetch()
+    await RedditStore.refresh(testing=True)
+    stdout.write(repr(RedditStore.store.q))
+    assert res is not None
+    assert len(res) > 0
 
 
-""" FIXME 
-    make Query and subclasses subclass of pydantic `BaseModel`    
-"""
-
-
-class Query(BaseModel):
-    verb: str
-
-    def __getattr__(self, key: str):
-        return self.data[key]
-
-
-class GetQuery(Query):
-    service: str
-    item_key: Optional[Any]
-
-
-class PostQuery(Query):
-    service: str
-    item_key: Optional[Any]
-    payload: Dict[Any, Any]
-
-
-class QueryResponse(BaseModel):
-    result: Optional[str]
-    error: Optional[str]
-    query: Query
-
-    def __getattr__(self, key: str):
-        return self.data[key]
+@pytest.mark.asyncio
+async def test_twitter():
+    res = await TwitterStore.fetch()
+    await TwitterStore.refresh(testing=True)
+    stdout.write(repr(TwitterStore.store.q))
+    assert res is not None
+    assert len(res) > 0
