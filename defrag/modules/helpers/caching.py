@@ -16,7 +16,6 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from defrag import pretty_log
 from defrag.modules.db.redis import RedisPool
 from defrag.modules.helpers.data_manipulation import compose
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union

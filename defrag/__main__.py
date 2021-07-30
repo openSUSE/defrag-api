@@ -15,12 +15,11 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 from defrag.modules.db.redis import RedisPool
-from typing import Dict
 import uvicorn
 import importlib
 from defrag import app, LOGGER, pretty_log
 from defrag.modules import ALL_MODULES
-from defrag.modules.helpers import Query, QueryResponse
+from defrag.modules.helpers import Query
 from defrag.modules.helpers.caching import CacheStrategy, RedisCacheStrategy
 from defrag.modules.helpers.services_manager import Run, ServiceTemplate, ServicesManager
 

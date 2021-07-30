@@ -15,8 +15,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 from collections import namedtuple
-from datetime import datetime
-from defrag import pretty_log
 from defrag.modules.helpers.caching import QStore
 from defrag.modules.helpers.data_manipulation import compose
 from typing import Any, Callable, List, NamedTuple, Optional, Tuple
