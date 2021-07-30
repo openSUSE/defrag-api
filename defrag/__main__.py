@@ -14,16 +14,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from datetime import datetime
-from defrag.modules.news_reddit_twitter import RedditStoring, TwitterStoring
-from defrag.modules.helpers.services_manager import Service, ServicesManager
-from defrag.modules.helpers import GetQuery
-from defrag.modules.helpers.cache import CacheMiddleWare, CacheStrategy, QueryResponse, RedisCacheStrategy, ServiceCacheStrategy
+from defrag.modules.db.redis import RedisPool
 from typing import Dict
 import uvicorn
 import importlib
-from defrag.modules import ALL_MODULES
 from defrag import app, LOGGER, pretty_log
+from defrag.modules import ALL_MODULES
+from defrag.modules.helpers import Query, QueryResponse
+from defrag.modules.helpers.caching import CacheStrategy, RedisCacheStrategy
+from defrag.modules.helpers.services_manager import Run, ServiceTemplate, ServicesManager
 
 IMPORTED = {}
 
@@ -45,47 +44,28 @@ def main() -> None:
 
 @app.on_event("startup")
 async def startup() -> None:
-    now = datetime.now()
-    twitter_redis = RedisCacheStrategy(
-        "twitter", TwitterStoring.refresh, True, True, 300, None, None)
-    twitter_cache_strat = CacheStrategy(None, twitter_redis, None)
-    twitter = Service("twitter", True, ServiceCacheStrategy(
-        [], twitter_cache_strat), now, None, None, None, None, None, None, None)
-    reddit_redis = RedisCacheStrategy(
-        "reddit", RedditStoring.refresh, True, True, 300, None, None)
-    reddit_cache_strat = CacheStrategy(None, reddit_redis, None)
-    reddit = Service("reddit", True, ServiceCacheStrategy(
-        [], reddit_cache_strat), now, None, None, None, None, None, None, None)
-    ServicesManager.register(twitter, reddit)
+    with RedisPool() as conn:
+        conn.flushall()
+    reddit_strategy = CacheStrategy(RedisCacheStrategy(
+        "reddit_default", True, True, 300, None, None), None)
+    twitter_strategy = CacheStrategy(RedisCacheStrategy(
+        "twitter_default", True, True, 300, None, None), None)
+    reddit = ServiceTemplate("reddit", reddit_strategy, None, None, None, None)
+    twitter = ServiceTemplate(
+        "twitter", twitter_strategy, None, None, None, None)
+    ServicesManager.initialize(twitter, reddit)
+    pretty_log("Finished startup with services",
+               str(ServicesManager.services.list_all()))
 
 
-@app.get("/twitter", response_model=QueryResponse)
+@app.get("/twitter")
 async def get_twitter():
-    query = GetQuery(verb="GET", service="twitter")
-    try:
-        if cache_strategy := ServicesManager.get("twitter").cache_strategies.current.redis:
-            return await CacheMiddleWare.run_query(query, cache_strategy)
-        return QueryResponse(query=query, error="Unable to find a suitable cache strategy for the twitter service")
-    except Exception as err:
-        return QueryResponse(query=query, error=f"Was trying to meet your query when this error occurred: {err}")
+    return await Run.query(Query(service="twitter"))
 
 
-@app.get("/reddit", response_model=QueryResponse)
+@app.get("/reddit")
 async def get_reddit():
-    query = GetQuery(verb="GET", service="reddit")
-    try:
-        if cache_strategy := ServicesManager.get("reddit").cache_strategies.current.redis:
-            res = await CacheMiddleWare.run_query(query, cache_strategy)
-            pretty_log("Finally", str(res))
-            return QueryResponse(query=query, error="", result="")
-        return QueryResponse(query=query, error="Unable to find a suitable cache strategy for the reddit service!")
-    except Exception as err:
-        return QueryResponse(query=query, error=f"Was trying to meet your query when this error occurred: {err}")
-
-
-@app.get("/")
-async def root() -> Dict[str, str]:
-    return {"message": "Hello World"}
+    return await Run.query(Query(service="reddit"))
 
 
 if __name__ == "__main__":

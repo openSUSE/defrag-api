@@ -16,9 +16,10 @@
 
 from dataclasses import dataclass
 from datetime import datetime
+from defrag import pretty_log
 from defrag.modules.db.redis import RedisPool
 from defrag.modules.helpers.data_manipulation import compose
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 from pottery import RedisDeque
 
 # TODO Maybe we want to deprecate this? :) It was a good first pass but I think we have moved along.
@@ -47,20 +48,21 @@ def cache(func):
 class Store:
     container: Iterable
 
-    def search_items(self, item_key: Any = None, _filter: Callable = lambda _: True, _slicer: Callable = lambda xs: xs[:len(xs)], _sorter: Callable = lambda xs: xs) -> List[Any]:
-        slicer_sorter = compose(_slicer, _sorter)
+    def search_items(self, item_key: Optional[Union[str, int]] = None, _filter: Callable = lambda _: True, _slicer: Callable = lambda xs: xs[:len(xs)], _sorter: Callable = lambda xs: xs) -> List[Any]:
+        slice_then_sort = compose(_slicer, _sorter)
         if not item_key:
-            return slicer_sorter(list(filter(_filter, self.container)))
+            res= slice_then_sort(list(filter(_filter, self.container)))
+            return res
         if not isinstance(self.container, Dict):
             raise Exception(
                 f"This container type does not support __getitem__: {type(self.container)}")
-        return slicer_sorter(list(filter(_filter, self.container[item_key])))
+        return slice_then_sort(list(filter(_filter, self.container[item_key])))
 
     def update_container_return_fresh_items(self, items: List[Any]) -> List[Any]:
-        raise Exception("Override me!")
+        raise Exception("Please override Store.update_container_return_fresh_items!")
 
     def filter_fresh_items(self, fetch_items: List[Any]) -> List[Any]:
-        raise Exception("Override me!")
+        raise Exception("Please override Store.filter_fresh_items!")
 
     @staticmethod
     async def fetch_items() -> Optional[List[Any]]:
@@ -69,9 +71,9 @@ class Store:
 
 class QStore(Store):
 
-    def __init__(self) -> None:
+    def __init__(self, key: str) -> None:
         self.container: RedisDeque = RedisDeque(
-            [], maxlen=1500, redis=RedisPool().connection)
+            [], key=key, maxlen=1500, redis=RedisPool().connection)
         self.when_last_update: Optional[datetime] = None
         self.when_initialized: datetime = datetime.now()
 
@@ -82,19 +84,17 @@ class QStore(Store):
         return items
 
     def filter_fresh_items(self, fetch_items: List[Any]) -> List[Any]:
-        raise Exception("Override me!")
+        raise Exception("Please override QStore.update_container_fresh_items!")
 
     @staticmethod
     async def fetch_items() -> Optional[List[Any]]:
-        raise Exception("Override me!")
+        raise Exception("Please override QStore.filter_fresh_items!")
 
 
 @dataclass
 class RedisCacheStrategy:
     # The name of the key in memory and in Reddis where the object equipped with the strategy is going to be cached.
     redis_key: str
-    # The async PURE function used by the object required with the strategy to refresh its cache.
-    refresher: Callable
     # Whether we should populate the cache ('warm-up') when (re)booting.
     populate_on_startup: bool
     # Whether we should run a background worker to refresh the cache now and then.
@@ -124,17 +124,8 @@ class StoreCacheStrategy:
 
 @dataclass
 class CacheStrategy:
-    """ To leave it open whether the equippend object uses different combinations of caching strategies. """
-    in_memory: Optional[InMemoryCacheStrategy]
-    redis: Optional[RedisCacheStrategy]
+    redis: RedisCacheStrategy
     db: Optional[StoreCacheStrategy]
-
-
-@dataclass
-class ServiceCacheStrategy:
-    """ Goes with the above. """
-    available: List[CacheStrategy]
-    current: CacheStrategy
 
 
 class QueryException(Exception):
