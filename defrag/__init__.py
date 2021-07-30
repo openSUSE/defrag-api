@@ -46,3 +46,5 @@ def pretty_log(comment: str, value: Optional[str] = None, warn: bool = False) ->
 
 # Initialize app
 app = FastAPI()
+
+

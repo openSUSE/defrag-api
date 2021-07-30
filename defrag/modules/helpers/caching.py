@@ -92,8 +92,6 @@ class QStore(Store):
 
 @dataclass
 class RedisCacheStrategy:
-    # The name of the key in memory and in Reddis where the object equipped with the strategy is going to be cached.
-    redis_key: str
     # Whether we should populate the cache ('warm-up') when (re)booting.
     populate_on_startup: bool
     # Whether we should run a background worker to refresh the cache now and then.
