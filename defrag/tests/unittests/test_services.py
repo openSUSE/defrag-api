@@ -1,5 +1,5 @@
-from fastapi.testclient import TestClient
 from defrag import app
+from fastapi.testclient import TestClient
 
 
 def test_twitter():

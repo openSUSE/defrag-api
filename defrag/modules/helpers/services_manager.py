@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from collections import UserDict
-from defrag.modules.news_reddit_twitter import RedditStore, TwitterStore
+from defrag.modules.db.redis import RedisPool
 from defrag.modules.helpers.data_manipulation import compose
 from defrag.modules.helpers import Query, QueryResponse
 from typing import Any, Awaitable, Callable, Dict, List, Optional
@@ -50,9 +50,6 @@ class Service:
 class Services(UserDict):
     """ A simple mapping from names to Services """
 
-    def __init__(self, names: List[str], services: List[Service]):
-        super().__init__(dict(zip(names, services)))
-
     def __getattr__(self, key: str):
         try:
             return self.data[key]
@@ -81,37 +78,18 @@ class Services(UserDict):
 
 class ServicesManager:
 
-    services: Optional[Services] = None
+    services: Services = Services({})
     """ Using the structure below instead of shoving everything to class constructors to
     have a 'dashboard view' of all defaults for all services. """
-    services_templates_to_services = {
-        "reddit": lambda templ, k, now: Service(True, True, now, None, RedditStore(k), None, templ),
-        "twitter": lambda templ, k, now: Service(True, True, now, None, TwitterStore(k), None, templ)
-        # ,"bugzilla"
-        # ,"wikis"
-        # ,"mailing_lists"
-        # ,"matrix"
-        # ,"telegram"
-        # ,"pagure"
-        # ,"zypper"
-        # ,"opi"
-        # ,"people"
-        # ,"events"
-        # ,"activities"
-    }
+
+    @staticmethod
+    def realize_service_template(templ: ServiceTemplate, store: Store) -> Service:
+        now = datetime.now()
+        return Service(True, True, now, None, store, None, templ)
 
     @classmethod
-    def initialize(cls, *services_templates: ServiceTemplate):
-        names = [st.name for st in services_templates]
-        invalid = [
-            n for n in names if not n in cls.services_templates_to_services]
-        if invalid:
-            raise Exception(
-                f"Tried to register a service that is currently not supported: {str(invalid)}")
-        now = datetime.now()
-        services = [cls.services_templates_to_services[st.name]
-                    (st, st.cache_strategy.redis.redis_key, now) for st in services_templates]
-        cls.services = Services(names, services)
+    def register_service(cls, name: str, service: Service):
+        cls.services[name] = service
 
     @classmethod
     async def enable_disable(cls, service_name: str, on: bool) -> None:
