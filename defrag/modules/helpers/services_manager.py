@@ -38,13 +38,13 @@ class ServiceTemplate:
 @dataclass
 class Service:
     """ Meant to be used a mutable service registered against the ServiceManager. """
-    is_enabled: bool
-    is_running: bool
     started_at: datetime
-    shutdown_at: Optional[datetime]
-    cache_store: Store
-    controllers: Optional[Controllers]
     template: ServiceTemplate
+    cache_store: Store
+    is_enabled: bool = True
+    is_running: bool = True
+    shutdown_at: Optional[datetime] = None
+    controllers: Optional[Controllers] = None
 
 
 class Services(UserDict):
@@ -78,14 +78,13 @@ class Services(UserDict):
 
 class ServicesManager:
 
-    services: Services = Services({})
-    """ Using the structure below instead of shoving everything to class constructors to
-    have a 'dashboard view' of all defaults for all services. """
+    services = Services({})
 
     @staticmethod
-    def realize_service_template(templ: ServiceTemplate, store: Store) -> Service:
+    def realize_service_template(templ: ServiceTemplate, store: Store, **init_state_override: Dict[str, Any]) -> Service:
         now = datetime.now()
-        return Service(True, True, now, None, store, None, templ)
+        if not init_state_override:
+            return Service(started_at=now, template=templ, cache_store=store)
 
     @classmethod
     def register_service(cls, name: str, service: Service):
