@@ -15,6 +15,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import logging
+from typing import Optional
 from fastapi import FastAPI
 
 LOGGER = logging.getLogger(__name__)
@@ -32,6 +33,16 @@ else:
 
 NO_LOAD = []
 LOAD = []
+
+
+def pretty_log(comment: str, value: Optional[str] = None, warn: bool = False) -> None:
+    """ Pretty loggin' baby! """
+    template = f"\n***********\n{comment.upper()}: {value}\n***********"
+    if warn:
+        LOGGER.warn(template)
+    else:
+        LOGGER.info(template)
+
 
 # Initialize app
 app = FastAPI()
