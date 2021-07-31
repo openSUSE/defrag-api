@@ -51,6 +51,12 @@ class TwitterStore(QStore):
 
 
 def register_service():
+    """ 
+    The idea is that modules are registered against the
+    service manager by calling this function. Can be called from @app.on_event('statupp'
+    for example, or from somewhere else in __main__, or from TwitterStore. To be discussed,
+    but it's flexible enough to work with any decision.
+    """
     name = "twitter"
     service_key = name + "_default"
     twitter_strategy = CacheStrategy(

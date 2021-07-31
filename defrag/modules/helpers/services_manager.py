@@ -77,7 +77,17 @@ class Services(UserDict):
 
 
 class ServicesManager:
+    """
+    This class is supposed to be the core of the application. When registering,
+    the services are inserted into the 'services' class attribute.
 
+    The registration is triggered externally (by each module's 'register()' function, but
+    it happens here: the registration is just a sequence of function calls that
+    take a service name, a'template' (description of settings) and a 'store' (a caching object)
+    into an instance of the Services class above. Then each instance of Services can be
+    seen as a service running in memory with an active caching behaviour backed up
+    by Redist. 
+    """
     services = Services({})
 
     @staticmethod
@@ -116,9 +126,17 @@ class ServicesManager:
 
 
 class Run:
+    """
+    This class maintains no inner state, it just holds some stateless functions
+    taking a request against and returning a response, but not before traversing the 
+    cache corresponding to the service responsible for handling the request.
+    """
 
     class Cache:
-
+        """
+        Async context manager allowing us to visit the cache associated with the service
+        responsible for each request.
+        """
         def __init__(self, query: Query, strategy: RedisCacheStrategy):
             self.strategy = strategy
             self.query = query

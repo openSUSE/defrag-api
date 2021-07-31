@@ -1,19 +1,3 @@
-# Defrag - centralized API for the openSUSE Infrastructure
-# Copyright (C) 2021 openSUSE contributors.
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-
 from dataclasses import dataclass
 from datetime import datetime
 from defrag.modules.db.redis import RedisPool
@@ -45,12 +29,20 @@ def cache(func):
 
 @dataclass
 class Store:
+    """
+    This is the base class featuring a container type that the 
+    subclasses will instantiate as appropriate. The container
+    should be a 'pottery cache object' (RedisQueue, RedisDict...) because only then
+    can the container perform its caching duty. 
+    The base class also features the instant method -- no need to override it -- 
+    for searching items in the cache.
+    """
     container: Iterable
 
     def search_items(self, item_key: Optional[Union[str, int]] = None, _filter: Callable = lambda _: True, _slicer: Callable = lambda xs: xs[:len(xs)], _sorter: Callable = lambda xs: xs) -> List[Any]:
         slice_then_sort = compose(_slicer, _sorter)
         if not item_key:
-            res= slice_then_sort(list(filter(_filter, self.container)))
+            res = slice_then_sort(list(filter(_filter, self.container)))
             return res
         if not isinstance(self.container, Dict):
             raise Exception(
@@ -58,7 +50,8 @@ class Store:
         return slice_then_sort(list(filter(_filter, self.container[item_key])))
 
     def update_container_return_fresh_items(self, items: List[Any]) -> List[Any]:
-        raise Exception("Please override Store.update_container_return_fresh_items!")
+        raise Exception(
+            "Please override Store.update_container_return_fresh_items!")
 
     def filter_fresh_items(self, fetch_items: List[Any]) -> List[Any]:
         raise Exception("Please override Store.filter_fresh_items!")
@@ -69,6 +62,11 @@ class Store:
 
 
 class QStore(Store):
+    """
+    Subclass specializing in 'RedisQueue' cache objects.
+    The class takes care of every piece of behaviour
+    associated with that cache object.
+    """
 
     def __init__(self, key: str) -> None:
         self.container: RedisDeque = RedisDeque(
@@ -92,6 +90,10 @@ class QStore(Store):
 
 @dataclass
 class RedisCacheStrategy:
+    """
+    Some settings to be consumed -- immutably -- by the Service Manager when 
+    registering services.
+    """
     # Whether we should populate the cache ('warm-up') when (re)booting.
     populate_on_startup: bool
     # Whether we should run a background worker to refresh the cache now and then.
@@ -102,13 +104,6 @@ class RedisCacheStrategy:
     runner_timeout: Optional[int]
     # How much time we should give the corresponding cache before cleaning (seconds)
     cache_decay: Optional[int]
-
-
-class InMemoryCacheStrategy:
-    """ Not sure about this yet """
-
-    def __init__(self, *args, **kwargs):
-        raise Exception("Not implemented 'InMemoryCacheStrategy")
 
 
 class StoreCacheStrategy:
