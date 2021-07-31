@@ -21,6 +21,9 @@ __MOD_NAME__ = "reddit"
 
 
 class RedditStore(QStore):
+    """
+    Specialization of QStore to handle specifically data by this service / module.
+    """
 
     def filter_fresh_items(self, items: List[NamedTuple]) -> List[NamedTuple]:
         if not items or not self.container:
@@ -54,6 +57,12 @@ class RedditStore(QStore):
 
 
 def register_service():
+    """ 
+    The idea is that modules are registered against the
+    service manager by calling this function. Can be called from @app.on_event('statupp'
+    for example, or from somewhere else in __main__, or from RedditStore. To be discussed,
+    but it's flexible enough to work with any decision.
+    """
     name = "reddit"
     service_key = name + "_default"
     twitter_strategy = CacheStrategy(
