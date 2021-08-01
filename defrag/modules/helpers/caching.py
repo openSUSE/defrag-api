@@ -33,21 +33,24 @@ class Store:
     This is the base class featuring a container type that the 
     subclasses will instantiate as appropriate. The container
     should be a 'pottery cache object' (RedisQueue, RedisDict...) because only then
-    can the container perform its caching duty. 
-    The base class also features the instant method -- no need to override it -- 
-    for searching items in the cache.
+    can the container perform its caching duty. The base class also features the 
+    instant method -- no need to override it -- for searching items in the cache.
+
+    TODO (if profiling suggests it's worth):
+    - wrap `__extend` (offered by RedisDeque) & `search_items` (offered by this class) to
+    with `to_async` to avoid sync calls.
     """
     container: Iterable
 
-    def search_items(self, item_key: Optional[Union[str, int]] = None, _filter: Callable = lambda _: True, _slicer: Callable = lambda xs: xs[:len(xs)], _sorter: Callable = lambda xs: xs) -> List[Any]:
-        slice_then_sort = compose(_slicer, _sorter)
+    def search_items(self, item_key: Optional[Union[str, int]] = None, aFilter: Callable = lambda _: True, aSlicer: Callable = lambda xs: xs[:len(xs)], aSorter: Callable = lambda xs: xs) -> List[Any]:
+        slice_then_sort = compose(aSlicer, aSorter)
         if not item_key:
-            res = slice_then_sort(list(filter(_filter, self.container)))
+            res = slice_then_sort(list(filter(aFilter, self.container)))
             return res
         if not isinstance(self.container, Dict):
             raise Exception(
                 f"This container type does not support __getitem__: {type(self.container)}")
-        return slice_then_sort(list(filter(_filter, self.container[item_key])))
+        return slice_then_sort(list(filter(aFilter, self.container[item_key])))
 
     def update_container_return_fresh_items(self, items: List[Any]) -> List[Any]:
         raise Exception(
@@ -70,7 +73,7 @@ class QStore(Store):
     """
     Subclass specializing in 'RedisQueue' cache objects.
     The class takes care of every piece of behaviour
-    associated with that cache object.
+    associated with that cache object.  
     """
 
     def __init__(self, key: str) -> None:
