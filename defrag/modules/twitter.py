@@ -1,14 +1,14 @@
 from defrag.modules.helpers import Query
-from typing import Any, List, NamedTuple, Optional
-from os import environ as env
-from operator import attrgetter
-import twitter
 from collections import namedtuple
 from defrag import app
 from defrag.modules.helpers.caching import CacheStrategy, QStore, RedisCacheStrategy
 from defrag.modules.helpers.data_manipulation import compose
 from defrag.modules.helpers.sync_utils import as_async
 from defrag.modules.helpers.services_manager import Run, ServiceTemplate, ServicesManager
+import twitter
+from typing import Any, List, NamedTuple, Optional
+from os import environ as env
+from operator import attrgetter
 
 """ INFO
 This module provides a class to
@@ -66,3 +66,8 @@ def register_service():
     service = ServicesManager.realize_service_template(
         twitter, TwitterStore(service_key))
     ServicesManager.register_service(name, service)
+
+
+@app.get("/twitter")
+async def get_twitter():
+    return await Run.query(Query(service="twitter"))

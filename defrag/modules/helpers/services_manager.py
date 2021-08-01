@@ -105,6 +105,7 @@ class ServicesManager:
     def register_service(cls, name: str, service: Service):
         """ Registers a service, making sure en passant that the refreshing worker is being run on time. """
         cls.services[name] = service
+        pretty_log("Registered: ", name)
         now = datetime.now()
         if not cls.auto_refresh_worker_last_run or now - cls.auto_refresh_worker_last_run > timedelta(seconds=60):
             asyncio.create_task(Run.autorefresh_services_stores())

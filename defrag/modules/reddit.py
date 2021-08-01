@@ -1,12 +1,12 @@
-from defrag.modules.helpers.requests import Req
-from defrag.modules.helpers import Query
-from typing import Any, Callable, List, NamedTuple, Optional, Tuple
-from collections import namedtuple
 from defrag import app
+from defrag.modules.helpers import Query
+from defrag.modules.helpers.requests import Req
 from defrag.modules.helpers.caching import CacheStrategy, QStore, RedisCacheStrategy
 from defrag.modules.helpers.data_manipulation import compose
 from defrag.modules.helpers.services_manager import Run, ServiceTemplate, ServicesManager
 import atoma
+from typing import Any, Callable, List, NamedTuple, Optional, Tuple
+from collections import namedtuple
 
 """ INFO
 This module provides a class to query & store recent reddit posts (sent to "r/openSUSE"). 
@@ -67,7 +67,7 @@ def register_service():
     reddit_strategy = CacheStrategy(
         RedisCacheStrategy(populate_on_startup=True, auto_refresh=True, auto_refresh_delay=300, runner_timeout=None, cache_decay=None), None)
     reddit = ServiceTemplate(name=name, cache_strategy=reddit_strategy,
-                              endpoint=None, port=None, credentials=None, custom_parameters=None)
+                             endpoint=None, port=None, credentials=None, custom_parameters=None)
     service = ServicesManager.realize_service_template(
         reddit, RedditStore(service_key))
     ServicesManager.register_service(name, service)

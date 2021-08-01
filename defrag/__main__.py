@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+from defrag.modules.helpers import Query
+from defrag.modules.helpers.services_manager import Run
 from defrag.modules.db.redis import RedisPool
 import uvicorn
 import importlib
@@ -40,11 +42,13 @@ def main() -> None:
 
 @app.on_event("startup")
 async def register_modules_as_services() -> None:
+    """ Registers all modules implementing 'register_service()'. """
     with RedisPool() as conn:
         conn.flushall()
-    for service in IMPORTED:
+    for service in IMPORTED.values():
         if hasattr(service, "register_service"):
             service.register_service()
+
 
 if __name__ == "__main__":
     main()
