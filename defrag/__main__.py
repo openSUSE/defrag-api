@@ -39,7 +39,7 @@ def main() -> None:
 
 
 @app.on_event("startup")
-async def register_modules_as_services():
+async def register_modules_as_services() -> None:
     with RedisPool() as conn:
         conn.flushall()
     for service in IMPORTED:
