@@ -14,9 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+from defrag.modules.db.redis import RedisPool
 import uvicorn
 import importlib
-from defrag import app, LOGGER, pretty_log
+from defrag import app, LOGGER
 from defrag.modules import ALL_MODULES
 
 IMPORTED = {}
@@ -36,6 +37,14 @@ def main() -> None:
             raise Exception(
                 "Can't have two modules with the same name! Please change one")
 
+
+@app.on_event("startup")
+async def register_modules_as_services():
+    with RedisPool() as conn:
+        conn.flushall()
+    for service in IMPORTED:
+        if hasattr(service, "register_service"):
+            service.register_service()
 
 if __name__ == "__main__":
     main()

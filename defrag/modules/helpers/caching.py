@@ -56,6 +56,11 @@ class Store:
     def filter_fresh_items(self, fetch_items: List[Any]) -> List[Any]:
         raise Exception("Please override Store.filter_fresh_items!")
 
+    def update_on_filtered_fresh(self, items: List[Any]) -> None:
+        self.update_container_return_fresh_items(
+            self.filter_fresh_items(items))
+        return None
+
     @staticmethod
     async def fetch_items() -> Optional[List[Any]]:
         raise Exception("Override me!")

@@ -1,12 +1,13 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import UserDict
 from defrag.modules.db.redis import RedisPool
 from defrag.modules.helpers.data_manipulation import compose
 from defrag.modules.helpers import Query, QueryResponse
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Coroutine, Dict, List, Optional
 from defrag.modules.helpers.caching import CacheStrategy, QueryException, RedisCacheStrategy, Store
 from defrag import LOGGER, pretty_log
+import asyncio
 
 
 @dataclass
@@ -89,6 +90,7 @@ class ServicesManager:
     by Redist. 
     """
     services = Services({})
+    auto_refresh_worker_last_run: Optional[datetime] = None
 
     @staticmethod
     def realize_service_template(templ: ServiceTemplate, store: Store, **init_state_override: Optional[Dict[str, Any]]) -> Service:
@@ -101,7 +103,11 @@ class ServicesManager:
 
     @classmethod
     def register_service(cls, name: str, service: Service):
+        """ Registers a service, making sure en passant that the refreshing worker is being run on time. """
         cls.services[name] = service
+        now = datetime.now()
+        if not cls.auto_refresh_worker_last_run or now - cls.auto_refresh_worker_last_run > timedelta(seconds=60):
+            asyncio.create_task(Run.autorefresh_services_stores())
 
     @classmethod
     async def enable_disable(cls, service_name: str, on: bool) -> None:
@@ -137,6 +143,7 @@ class Run:
         Async context manager allowing us to visit the cache associated with the service
         responsible for each request.
         """
+
         def __init__(self, query: Query, strategy: RedisCacheStrategy):
             self.strategy = strategy
             self.query = query
@@ -158,10 +165,35 @@ class Run:
                 raise Exception(
                     "CacheTraveller has nothing to travel if Services are not initialized")
             if self.refreshed_items:
-                diff_then_update = compose(ServicesManager.services[self.query.service].cache_store.filter_fresh_items,
-                                           ServicesManager.services[self.query.service].cache_store.update_container_return_fresh_items)
-                diff_then_update(self.refreshed_items)
+                ServicesManager.services[self.query.service].cache_store.update_on_filtered_fresh(
+                    self.refreshed_items)
                 pretty_log("Cache: Ouch, cache miss on", str(self.query))
+
+    @staticmethod
+    async def autorefresh_services_stores(interval: int = 60) -> None:
+        """ Every minute, iterate over all registered services, refreshing all those that want it."""
+        await asyncio.sleep(interval)
+        if not ServicesManager.services:
+            return
+        tasks: List[Coroutine] = []
+
+        async def fetch_then_update(serv_name: str) -> Dict[str, str]:
+            try:
+                if items := await ServicesManager.services[serv_name].cache_store.fetch_items():
+                    ServicesManager.services[serv_name].cache_store.update_on_filtered_fresh(
+                        items)
+                    return {"service_name": serv_name, "ok": ""}
+                return {"service_name": serv_name, "error": "Unable to fetch!"}
+            except Exception as error:
+                return {"service_name": serv_name, "error": str(error)}
+
+        for serv_name, serv in ServicesManager.services.items():
+            if strat := serv.template.cache_strategy:
+                if strat.autorefresh:
+                    tasks.append(fetch_then_update(serv_name))
+        await asyncio.gather(*tasks)
+        ServicesManager.auto_refresh_worker_last_run = datetime.now()
+        asyncio.create_task(Run.autorefresh_services_stores())
 
     @staticmethod
     async def query(query: Query) -> QueryResponse:
