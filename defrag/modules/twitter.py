@@ -60,13 +60,9 @@ def register_service():
     name = "twitter"
     service_key = name + "_default"
     twitter_strategy = CacheStrategy(
-        RedisCacheStrategy(True, True, 300, None, None), None)
-    twitter = ServiceTemplate(name, twitter_strategy, None, None, None, None)
+        RedisCacheStrategy(populate_on_startup=True, auto_refresh=True, auto_refresh_delay=300, runner_timeout=None, cache_decay=None), None)
+    twitter = ServiceTemplate(name=name, cache_strategy=twitter_strategy,
+                              endpoint=None, port=None, credentials=None, custom_parameters=None)
     service = ServicesManager.realize_service_template(
         twitter, TwitterStore(service_key))
     ServicesManager.register_service(name, service)
-
-
-@app.get("/twitter")
-async def get_twitter():
-    return await Run.query(Query(service="twitter"))
