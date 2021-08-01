@@ -91,6 +91,7 @@ class ServicesManager:
     """
     services = Services({})
     auto_refresh_worker_last_run: Optional[datetime] = None
+    auto_refresh_worker_locked = False
 
     @staticmethod
     def realize_service_template(templ: ServiceTemplate, store: Store, **init_state_override: Optional[Dict[str, Any]]) -> Service:
@@ -102,12 +103,17 @@ class ServicesManager:
         return Service(**init_state)
 
     @classmethod
-    def register_service(cls, name: str, service: Service):
-        """ Registers a service, making sure en passant that the refreshing worker is being run on time. """
+    def register_service(cls, name: str, service: Service) -> None:
+        """ 
+        Registers a service, making sure en passant that the refreshing worker is being run on time
+        and only if it's not running already. 
+        """
         cls.services[name] = service
         pretty_log("Registered: ", name)
         now = datetime.now()
-        if not cls.auto_refresh_worker_last_run or now - cls.auto_refresh_worker_last_run > timedelta(seconds=60):
+        if cls.auto_refresh_worker_locked:
+            return
+        if not cls.auto_refresh_worker_last_run or (now - cls.auto_refresh_worker_last_run > timedelta(seconds=60)):
             asyncio.create_task(Run.autorefresh_services_stores())
 
     @classmethod
@@ -172,7 +178,11 @@ class Run:
 
     @staticmethod
     async def autorefresh_services_stores(interval: int = 60) -> None:
-        """ Every minute, iterate over all registered services, refreshing all those that want it."""
+        """ 
+        Every minute, iterate over all registered services, refreshing all those that want it.
+        Acquires and release a 'lock' at the beginning, respectively at the end of the function body.
+        """
+        ServicesManager.auto_refresh_worker_locked = True
         await asyncio.sleep(interval)
         if not ServicesManager.services:
             return
@@ -194,6 +204,7 @@ class Run:
                     tasks.append(fetch_then_update(serv_name))
         await asyncio.gather(*tasks)
         ServicesManager.auto_refresh_worker_last_run = datetime.now()
+        ServicesManager.auto_refresh_worker_locked = False
         asyncio.create_task(Run.autorefresh_services_stores())
 
     @staticmethod
