@@ -24,11 +24,6 @@ __MOD_NAME__ = "twitter"
 
 class TwitterStore(QStore):
 
-    def filter_fresh_items(self, items: List[NamedTuple]) -> List[NamedTuple]:
-        if not items or not self.container:
-            return items
-        return [i for i in items if getattr(i, "created_at_in_seconds") > self.when_last_update]
-
     @staticmethod
     async def fetch_items() -> Optional[List[NamedTuple]]:
         def _sort(xs: List[Any]) -> List[Any]:
@@ -48,6 +43,11 @@ class TwitterStore(QStore):
             return sort_make(entries)
         except Exception as err:
             print("Unable to fetch from Twitter @openSUSE: ", err)
+
+    def filter_fresh_items(self, items: List[NamedTuple]) -> List[NamedTuple]:
+        if not items or not self.container:
+            return items
+        return [i for i in items if getattr(i, "created_at_in_seconds") > self.when_last_update]
 
 
 def register_service():

@@ -24,11 +24,6 @@ class RedditStore(QStore):
     Specialization of QStore to handle specifically data by this service / module.
     """
 
-    def filter_fresh_items(self, items: List[NamedTuple]) -> List[NamedTuple]:
-        if not items or not self.container:
-            return items
-        return [i for i in items if getattr(i, "updated") > self.when_last_update]
-
     @staticmethod
     async def fetch_items() -> Optional[List[NamedTuple]]:
         """ Tries to fetch 25 most recent posts from r/openSUSE and extract title, url
@@ -53,6 +48,11 @@ class RedditStore(QStore):
                     raise Exception("Empty results from r/openSUSE")
             except Exception as err:
                 print("Unable to fetch r/openSUSE: ", err)
+
+    def filter_fresh_items(self, items: List[NamedTuple]) -> List[NamedTuple]:
+        if not items or not self.container:
+            return items
+        return [i for i in items if getattr(i, "updated") > self.when_last_update]
 
 
 def register_service():

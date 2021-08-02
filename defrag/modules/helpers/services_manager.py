@@ -172,7 +172,7 @@ class Run:
                 raise Exception(
                     "CacheTraveller has nothing to travel if Services are not initialized")
             if self.refreshed_items:
-                ServicesManager.services[self.query.service].cache_store.update_on_filtered_fresh(
+                await ServicesManager.services[self.query.service].cache_store.update_on_filtered_fresh(
                     self.refreshed_items)
                 pretty_log("Cache: Ouch, cache miss on", str(self.query))
 
@@ -191,7 +191,7 @@ class Run:
         async def fetch_then_update(serv_name: str) -> Dict[str, str]:
             try:
                 if items := await ServicesManager.services[serv_name].cache_store.fetch_items():
-                    ServicesManager.services[serv_name].cache_store.update_on_filtered_fresh(
+                    await ServicesManager.services[serv_name].cache_store.update_on_filtered_fresh(
                         items)
                     return {"service_name": serv_name, "ok": ""}
                 return {"service_name": serv_name, "error": "Unable to fetch!"}

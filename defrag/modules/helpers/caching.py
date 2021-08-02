@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from defrag.modules.db.redis import RedisPool
+from defrag.modules.helpers.sync_utils import as_async
 from defrag.modules.helpers.data_manipulation import compose
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 from pottery import RedisDeque
@@ -40,34 +41,36 @@ class Store:
     - wrap `__extend` (offered by RedisDeque) & `search_items` (offered by this class) to
     with `to_async` to avoid sync calls.
     """
-    container: Iterable
+    @staticmethod
+    async def fetch_items() -> Optional[List[Any]]:
+        raise Exception("Override me!")
 
+    container: Iterable
+    
+    @as_async
     def search_items(self, item_key: Optional[Union[str, int]] = None, aFilter: Callable = lambda _: True, aSlicer: Callable = lambda xs: xs[:len(xs)], aSorter: Callable = lambda xs: xs) -> List[Any]:
+        """ This is made async (= registers as future run in threads) to avoid blocking the events loop """
         slice_then_sort = compose(aSlicer, aSorter)
         if not item_key:
-            res = slice_then_sort(list(filter(aFilter, self.container)))
-            return res
+            return slice_then_sort(list(filter(aFilter, self.container)))
         if not isinstance(self.container, Dict):
             raise Exception(
                 f"This container type does not support __getitem__: {type(self.container)}")
         return slice_then_sort(list(filter(aFilter, self.container[item_key])))
 
+    @as_async
     def update_container_return_fresh_items(self, items: List[Any]) -> List[Any]:
+        """ This is made async (= registers as future run in threads) to avoid blocking the events loop """
         raise Exception(
             "Please override Store.update_container_return_fresh_items!")
 
     def filter_fresh_items(self, fetch_items: List[Any]) -> List[Any]:
         raise Exception("Please override Store.filter_fresh_items!")
 
-    def update_on_filtered_fresh(self, items: List[Any]) -> None:
+    async def update_on_filtered_fresh(self, items: List[Any]) -> None:
         self.update_container_return_fresh_items(
             self.filter_fresh_items(items))
         return None
-
-    @staticmethod
-    async def fetch_items() -> Optional[List[Any]]:
-        raise Exception("Override me!")
-
 
 class QStore(Store):
     """
@@ -76,12 +79,17 @@ class QStore(Store):
     associated with that cache object.  
     """
 
+    @staticmethod
+    async def fetch_items() -> Optional[List[Any]]:
+        raise Exception("Please override QStore.filter_fresh_items!")
+
     def __init__(self, key: str) -> None:
         self.container: RedisDeque = RedisDeque(
             [], key=key, maxlen=1500, redis=RedisPool().connection)
         self.when_last_update: Optional[datetime] = None
         self.when_initialized: datetime = datetime.now()
 
+    @as_async
     def update_container_return_fresh_items(self, items: List[Any]) -> List[Any]:
         """ extendleft() + maxlen work together to append at one end while removing at the other """
         self.container.extendleft(items)
@@ -90,10 +98,6 @@ class QStore(Store):
 
     def filter_fresh_items(self, fetch_items: List[Any]) -> List[Any]:
         raise Exception("Please override QStore.update_container_fresh_items!")
-
-    @staticmethod
-    async def fetch_items() -> Optional[List[Any]]:
-        raise Exception("Please override QStore.filter_fresh_items!")
 
 
 @dataclass
