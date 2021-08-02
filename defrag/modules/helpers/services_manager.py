@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from collections import UserDict
-from defrag.modules.db.redis import RedisPool
-from defrag.modules.helpers.data_manipulation import compose
 from defrag.modules.helpers import Query, QueryResponse
 from typing import Any, Awaitable, Callable, Coroutine, Dict, List, Optional
 from defrag.modules.helpers.caching import CacheStrategy, QueryException, RedisCacheStrategy, Store

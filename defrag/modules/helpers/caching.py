@@ -37,9 +37,6 @@ class Store:
     can the container perform its caching duty. The base class also features the 
     instant method -- no need to override it -- for searching items in the cache.
 
-    TODO (if profiling suggests it's worth):
-    - wrap `__extend` (offered by RedisDeque) & `search_items` (offered by this class) to
-    with `to_async` to avoid sync calls.
     """
     @staticmethod
     async def fetch_items() -> Optional[List[Any]]:
