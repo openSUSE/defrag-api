@@ -14,12 +14,27 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional, Union
+from pydantic.main import BaseModel
 
 
-class QueryObject:
-    def __init__(self, query: Dict[Any, Any]):
-        self.context = query
+""" FIXME 
+    make Query and subclasses subclass of pydantic `BaseModel`    
+"""
 
-    def __repr__(self):
-        return "<Query Object>"
+
+class Query(BaseModel):
+    service: str
+    item_key: Optional[Union[int, str]]
+
+
+class PostQuery(Query):
+    payload: Dict[Any, Any]
+
+
+class QueryResponse(BaseModel):
+    query: Query
+    results_count: Optional[int] = None
+    results: Optional[List[Any]] = None
+    error: Optional[str] = None
+    

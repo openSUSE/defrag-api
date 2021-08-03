@@ -15,7 +15,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 from functools import reduce
-from typing import Any, Callable, List, Tuple
+from typing import Any, Callable, Iterable, List, Tuple
 
 """
 Some utilities for doing data manipulation.
@@ -23,7 +23,7 @@ Some utilities for doing data manipulation.
 
 
 def compose(*funcs: Tuple[Callable]) -> Callable:
-    """ Compose multiple functions (left-associative) """
+    """ Compose multiple functions (right-associative) """
     def step(acc, f):
         return f(acc)
 
@@ -52,3 +52,14 @@ def make_transducer(xform: Callable, step: Callable, folder: List[Any] = []) -> 
     def transducer(seq):
         return reduce(xform(step), seq, folder)
     return transducer
+
+
+def partition_left_right(xs: Iterable, predicate: Callable) -> Tuple[List[Any], List[Any]]:
+    def reducer(acc, val):
+        left, right = acc
+        if predicate(val):
+            right.append(val)
+        else:
+            left.append(val)
+        return acc
+    return reduce(reducer, xs, ([], []))
