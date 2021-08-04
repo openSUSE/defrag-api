@@ -1,15 +1,32 @@
-from defrag import app
-from fastapi.testclient import TestClient
-import sys
+from defrag.modules.db.redis import RedisPool
+from defrag.modules.helpers.caching import RedisCacheStrategy
+from defrag.modules.helpers import Query, QueryResponse
+from defrag.modules.helpers.services_manager import Run
+from defrag.modules.reddit import register_service as register_reddit
+from defrag.modules.twitter import register_service as register_twitter
+import pytest
 
-def test_twitter():
-    with TestClient(app) as client:
-        response = client.get("/twitter")
-        sys.stdout.write(str(response.json()))
-        assert response.status_code == 404
+"""
+Admittedly not very detailed, if you guys need me to unpack all the intermediary
+steps, let me know.
+"""
 
-def test_reddit():
-    with TestClient(app) as client:
-        response = client.get("/reddit")
-        sys.stdout.write(str(response.json()))
-        assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_reddit_service():
+    with RedisPool() as connection:
+        connection.flushall()
+    register_reddit()
+    query = Query(service="reddit")
+    res: QueryResponse = await Run.query(query)
+    assert res.results_count == 25
+
+
+@pytest.mark.asyncio
+async def test_twitter_service():
+    with RedisPool() as connection:
+        connection.flushall()
+    register_twitter()
+    query = Query(service="twitter")
+    res: QueryResponse = await Run.query(query)
+    assert res.results_count == 20
