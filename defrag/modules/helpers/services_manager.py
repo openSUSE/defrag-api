@@ -139,7 +139,7 @@ class ServicesManager:
 class Run:
     """
     This class maintains no inner state, it just holds some stateless functions
-    taking a request against and returning a response, but not before traversing the 
+    taking a request against and returning a response, traversing the 
     cache corresponding to the service responsible for handling the request.
     """
 
