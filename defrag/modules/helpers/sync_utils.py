@@ -16,7 +16,7 @@
 
 import asyncio
 from functools import partial, wraps
-from typing import Awaitable, Callable
+from typing import Callable
 
 """
 We want to use `as_async` and `to_async` in all these cases where we need to 

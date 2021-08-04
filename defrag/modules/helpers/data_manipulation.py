@@ -54,7 +54,7 @@ def make_transducer(xform: Callable, step: Callable, folder: List[Any] = []) -> 
     return transducer
 
 
-def partition_left_right(xs: Iterable, predicate: Callable) -> Tuple[List[Any], List[Any]]:
+def partition_left_right(predicate: Callable, xs: Iterable) -> Tuple[List[Any], List[Any]]:
     def reducer(acc, val):
         left, right = acc
         if predicate(val):
