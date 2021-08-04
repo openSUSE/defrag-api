@@ -23,6 +23,7 @@ async def profile_caching():
     await store.update_on_filtered_fresh(filtered)
     print(len(list(store.container)))
 
+
 def main():
     asyncio.run(profile_caching())
 
@@ -33,19 +34,23 @@ if __name__ == "__main__":
     import sys
     p = os.path.abspath('.')
     sys.path.insert(1, p)
+
     # Profiling tools
     import cProfile
     import pstats
     from datetime import datetime
+
     # defrag modules
     from defrag.modules.helpers.caching import QStore
     from defrag.modules.db.redis import RedisPool
+
     # the profiling itself
     profiler = cProfile.Profile()
     profiler.enable()
     main()
     profiler.disable()
     stats = pstats.Stats(profiler).sort_stats('tottime')
+
     # output
     output_dir = os.environ["PROFILE_STATS_OUTPUT_DIR"]
     stats.dump_stats(

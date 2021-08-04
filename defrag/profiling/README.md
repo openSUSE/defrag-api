@@ -1,7 +1,8 @@
-## Some good basics: 
-- https://www.infoworld.com/article/3329750/how-to-profile-python-code.html
-- https://www.roguelynn.com/words/asyncio-profiling/
-
 ## How to
-1. Run the scripts with the default Python interpreted used by your Python package manager (i.e. pipenv)
-2. Find the results in the `/stats` child directory.
+### With nice graphs
+1. Update your environment with `requirements.txt`
+2. Install KCachegrind
+3. Run the scripts with the default Python interpreted used by your Python package manager (i.e. pipenv)
+4. Run `pyprof2calltree -i <path to the output file generated from the previous step>.dat -k` (needs step 2)
+### Just the stats
+Just do step 3 above.
