@@ -42,10 +42,24 @@ class Store:
     async def fetch_items() -> Optional[List[Any]]:
         raise Exception("Override me!")
 
+    @staticmethod
+    def Sync_fetch_items() -> Optional[List[Any]]:
+        raise Exception("Override me!")
+
     container: Iterable
-    
+
     @as_async
     def search_items(self, item_key: Optional[Union[str, int]] = None, aFilter: Callable = lambda _: True, aSlicer: Callable = lambda xs: xs[:len(xs)], aSorter: Callable = lambda xs: xs) -> List[Any]:
+        """ This is made async (= registers as future run in threads) to avoid blocking the events loop """
+        slice_then_sort = compose(aSlicer, aSorter)
+        if not item_key:
+            return slice_then_sort(list(filter(aFilter, self.container)))
+        if not isinstance(self.container, Dict):
+            raise Exception(
+                f"This container type does not support __getitem__: {type(self.container)}")
+        return slice_then_sort(list(filter(aFilter, self.container[item_key])))
+
+    def Sync_search_items(self, item_key: Optional[Union[str, int]] = None, aFilter: Callable = lambda _: True, aSlicer: Callable = lambda xs: xs[:len(xs)], aSorter: Callable = lambda xs: xs) -> List[Any]:
         """ This is made async (= registers as future run in threads) to avoid blocking the events loop """
         slice_then_sort = compose(aSlicer, aSorter)
         if not item_key:
@@ -61,12 +75,22 @@ class Store:
         raise Exception(
             "Please override Store.update_container_return_fresh_items!")
 
+    def Sync_update_container_return_fresh_items(self, items: List[Any]) -> List[Any]:
+        """ This is made async (= registers as future run in threads) to avoid blocking the events loop """
+        raise Exception(
+            "Please override Store.update_container_return_fresh_items!")
+
     def filter_fresh_items(self, fetch_items: List[Any]) -> List[Any]:
         raise Exception("Please override Store.filter_fresh_items!")
 
     async def update_on_filtered_fresh(self, items: List[Any]) -> None:
         await self.update_container_return_fresh_items(
             self.filter_fresh_items(items))
+
+    def Sync_update_on_filtered_fresh(self, items: List[Any]) -> None:
+        self.Sync_update_container_return_fresh_items(
+            self.filter_fresh_items(items))
+
 
 class QStore(Store):
     """
@@ -87,6 +111,12 @@ class QStore(Store):
 
     @as_async
     def update_container_return_fresh_items(self, items: List[Any]) -> List[Any]:
+        """ extendleft() + maxlen work together to append at one end while removing at the other """
+        self.container.extendleft(items)
+        self.last_update = datetime.now()
+        return items
+
+    def Sync_update_container_return_fresh_items(self, items: List[Any]) -> List[Any]:
         """ extendleft() + maxlen work together to append at one end while removing at the other """
         self.container.extendleft(items)
         self.last_update = datetime.now()
