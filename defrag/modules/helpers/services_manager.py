@@ -158,7 +158,7 @@ class Run:
             if not ServicesManager.services:
                 raise Exception(
                     "Cache cannot be traversed before Services are initialized")
-            if items_from_cache := ServicesManager.services[self.query.service].cache_store.search_items():
+            if items_from_cache := await ServicesManager.services[self.query.service].cache_store.search_items():
                 return items_from_cache
             if fetched_items := await ServicesManager.services[self.query.service].cache_store.fetch_items():
                 self.refreshed_items = fetched_items

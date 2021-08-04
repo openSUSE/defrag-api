@@ -65,9 +65,8 @@ class Store:
         raise Exception("Please override Store.filter_fresh_items!")
 
     async def update_on_filtered_fresh(self, items: List[Any]) -> None:
-        self.update_container_return_fresh_items(
+        await self.update_container_return_fresh_items(
             self.filter_fresh_items(items))
-        return None
 
 class QStore(Store):
     """

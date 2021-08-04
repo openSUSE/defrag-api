@@ -1,4 +1,3 @@
-import asyncio
 from defrag.modules.helpers.sync_utils import as_async, as_async_callback
 import pytest
 from time import sleep
