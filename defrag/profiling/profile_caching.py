@@ -52,7 +52,7 @@ if __name__ == "__main__":
     stats = pstats.Stats(profiler).sort_stats('tottime')
 
     # output
-    output_dir = os.environ["PROFILE_STATS_OUTPUT_DIR"]
+    output_dir = os.environ["PROFILE_STATS_OUTPUT_DIR"] # wants an absolute path
     stats.dump_stats(
         f"{output_dir}{str(datetime.now())}.dat")
     stats.print_stats()
