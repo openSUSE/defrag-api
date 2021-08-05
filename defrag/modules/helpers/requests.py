@@ -19,35 +19,20 @@ class Req:
             cls.session = ClientSession()
         return cls.session
 
-    @classmethod
-    async def close_session(cls) -> None:
-        if cls.session and not cls.session.closed:
-            await cls.session.close()
-
-    def __init__(self, url: str, verb: Optional[str] = "GET", json: Optional[Dict[AnyStr, AnyStr]] = None, closeOnResponse: Optional[bool] = True) -> None:
+    def __init__(self, url: str, json: Optional[Dict[AnyStr, AnyStr]] = None, closeOnResponse: bool = True) -> None:
         if json:
             self.json = json
-        self.verb = verb
         self.url = url
         self.closeOnResponse = closeOnResponse
 
     async def __aenter__(self) -> Any:
         # Fix me: this is not an appropriate return type, but the library does not seem to expose the right type.
         try:
-            if not self.verb in self.implemented_verbs:
-                raise self.ReqException(
-                    f"This verb is not implemented {self.verb}")
-            if self.verb == "GET":
-                return await self.get_session().get(self.url)
-            if self.verb == "POST":
-                if not self.json:
-                    raise self.ReqException(
-                        f"POST-ing requires passing a json argument, as in `Req(ulr, verb='GET', json=...)`.")
-                return self.get_session().post(self.url, json=self.json)
-        except aiohttp.ClientResponseError as exp:
-            raise NetworkException(f"{exp.status}: {exp.message}")
-        except aiohttp.ServerTimeoutError as exp:
-            raise NetworkException("Timeout.")
+            if self.json:
+                return await self.session.post(self.url, json=self.json)
+            return await self.session.get(self.url)
+        except Exception as error:
+            print(f"This error occurred while Requesting: {error}")
 
     async def __aexit__(self, *args, **kwargs) -> None:
         if self.closeOnResponse:
