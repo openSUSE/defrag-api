@@ -3,8 +3,8 @@ from datetime import datetime
 from defrag.modules.db.redis import RedisPool
 from defrag.modules.helpers.sync_utils import as_async
 from defrag.modules.helpers.data_manipulation import compose
-from typing import Any, Callable, Dict, Iterable, List, Optional, Union
-from pottery import RedisDeque
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from pottery import RedisDeque, RedisDict
 
 # TODO Maybe we want to deprecate this? :) It was a good first pass but I think we have moved along.
 """
@@ -43,7 +43,7 @@ class Store:
         raise Exception("Override me!")
 
     container: Iterable
-    
+
     @as_async
     def search_items(self, item_key: Optional[Union[str, int]] = None, aFilter: Callable = lambda _: True, aSlicer: Callable = lambda xs: xs[:len(xs)], aSorter: Callable = lambda xs: xs) -> List[Any]:
         """ This is made async (= registers as future run in threads) to avoid blocking the events loop """
@@ -68,6 +68,7 @@ class Store:
         await self.update_container_return_fresh_items(
             self.filter_fresh_items(items))
 
+
 class QStore(Store):
     """
     Subclass specializing in 'RedisQueue' cache objects.
@@ -89,6 +90,35 @@ class QStore(Store):
     def update_container_return_fresh_items(self, items: List[Any]) -> List[Any]:
         """ extendleft() + maxlen work together to append at one end while removing at the other """
         self.container.extendleft(items)
+        self.last_update = datetime.now()
+        return items
+
+    def filter_fresh_items(self, fetch_items: List[Any]) -> List[Any]:
+        raise Exception("Please override QStore.update_container_fresh_items!")
+
+
+class DStore(Store):
+    """
+    Subclass specializing in 'RedisDict' cache objects.
+    The class takes care of every piece of behaviour
+    associated with that cache object.  
+    """
+
+    @staticmethod
+    async def fetch_items() -> Optional[List[Any]]:
+        raise Exception("Please override QStore.filter_fresh_items!")
+
+    def __init__(self, redis_key: str, dict_key: str) -> None:
+        self.container: RedisDict = RedisDict(
+            [], key=redis_key, redis=RedisPool().connection)
+        self.when_last_update: Optional[datetime] = None
+        self.when_initialized: datetime = datetime.now()
+        self.dict_key = dict_key
+
+    @as_async
+    def update_container_return_fresh_items(self, items: List[Any]) -> List[Any]:
+        for i in items:
+            self.container[i[self.dict_key]] = i
         self.last_update = datetime.now()
         return items
 

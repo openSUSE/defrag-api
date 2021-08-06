@@ -1,5 +1,7 @@
+from defrag.modules.helpers.exceptions import NetworkException
 from typing import Any, AnyStr, Dict, Optional
 from aiohttp import ClientSession
+import aiohttp
 
 
 class Req:
@@ -26,17 +28,22 @@ class Req:
         self.session = self.get_session()
 
     async def __aenter__(self) -> Any:
-        print(self.verb)
         # Fix me: this is not an appropriate return type, but the library does not seem to expose the right type.
-        if not self.verb in self.implemented_verbs:
-            raise self.ReqException(f"This verb is not implemented {self.verb}")
-        if self.verb == "GET":
-            return await self.session.get(self.url)
-        if self.verb == "POST":
-            if not self.json:
+        try:
+            if not self.verb in self.implemented_verbs:
                 raise self.ReqException(
-                    f"POST-ing requires passing a json argument, as in `Req(ulr, verb='GET', json=...)`.")
-            return await self.session.post(self.url, json=self.json)
+                    f"This verb is not implemented {self.verb}")
+            if self.verb == "GET":
+                return await self.session.get(self.url)
+            if self.verb == "POST":
+                if not self.json:
+                    raise self.ReqException(
+                        f"POST-ing requires passing a json argument, as in `Req(ulr, verb='GET', json=...)`.")
+                return await self.session.post(self.url, json=self.json)
+        except aiohttp.ClientResponseError as exp:
+            raise NetworkException(f"{exp.status}: {exp.message}")
+        except aiohttp.ServerTimeoutError as exp:
+            raise NetworkException("Timeout.")
 
     async def __aexit__(self, *args, **kwargs) -> None:
         if self.closeOnResponse:

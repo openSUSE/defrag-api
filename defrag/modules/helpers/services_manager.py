@@ -1,10 +1,11 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from collections import UserDict
-from defrag.modules.helpers import Query, QueryResponse
+from defrag.modules.helpers import CacheQuery, QueryResponse
 from typing import Any, Awaitable, Callable, Coroutine, Dict, List, Optional
-from defrag.modules.helpers.caching import CacheStrategy, QueryException, RedisCacheStrategy, Store
-from defrag import LOGGER, pretty_log
+from defrag.modules.helpers.cache_stores import CacheStrategy, QueryException, Store
+from functools import partial
+from defrag import LOGGER
 import asyncio
 
 
@@ -88,8 +89,8 @@ class ServicesManager:
     by Redist. 
     """
     services = Services({})
-    auto_refresh_worker_last_run: Optional[datetime] = None
-    auto_refresh_worker_locked = False
+    monitor_last_run: Optional[datetime] = None
+    monitor_is_running: bool = False
 
     @staticmethod
     def realize_service_template(templ: ServiceTemplate, store: Store, **init_state_override: Optional[Dict[str, Any]]) -> Service:
@@ -106,13 +107,10 @@ class ServicesManager:
         Registers a service, making sure en passant that the refreshing worker is being run on time
         and only if it's not running already. 
         """
+        if not cls.services.keys():
+            asyncio.create_task(cls.start_monitor())
         cls.services[name] = service
-        pretty_log("Registered: ", name)
-        now = datetime.now()
-        if cls.auto_refresh_worker_locked:
-            return
-        if not cls.auto_refresh_worker_last_run or (now - cls.auto_refresh_worker_last_run > timedelta(seconds=60)):
-            asyncio.create_task(Run.autorefresh_services_stores())
+        LOGGER.info("Registered: ", name)
 
     @classmethod
     async def enable_disable(cls, service_name: str, on: bool) -> None:
@@ -135,6 +133,37 @@ class ServicesManager:
             LOGGER.warning(
                 f"Failed to enable this service: {service_name} for this reason {err}")
 
+    @classmethod
+    async def start_monitor(cls, interval: int = 60) -> None:
+        """ 
+        Every minute, iterate over all registered services, refreshing all those that want it.
+        Acquires and release a 'lock' at the beginning, respectively at the end of the function body.
+        """
+        async def fetch_then_update(serv_name: str) -> None:
+            try:
+                if items := await cls.services[serv_name].cache_store.fetch_items():
+                    await cls.services[serv_name].cache_store.update_on_filtered_fresh(
+                        items)
+                    LOGGER.info(f"Monitor: service {serv_name} was refreshed")
+                else:
+                    LOGGER.warning(
+                        f"Monitor: service {serv_name} could not be refreshed, even though no error occurred.")
+            except Exception as error:
+                LOGGER.error(f"Service {serv_name} threw an error: {error}")
+        while True:
+            await asyncio.sleep(interval)
+            cls.monitor_is_running = True
+            if not cls.services:
+                return
+            tasks: List[Coroutine] = []
+            for serv_name, serv in cls.services.items():
+                if strat := serv.template.cache_strategy:
+                    if strat.autorefresh:
+                        tasks.append(fetch_then_update(serv_name))
+            await asyncio.gather(*tasks)
+            cls.monitor_last_run = datetime.now()
+            cls.monitor_is_running = False
+
 
 class Run:
     """
@@ -146,79 +175,42 @@ class Run:
     class Cache:
         """
         Async context manager allowing us to visit the cache associated with the service
-        responsible for each request.
+        responsible for each request. We should write a small 'domain-specific language' for interpreting and evaluating queries here.
+        For now we only evaluate them by taking them to visit the cache.
         """
 
-        def __init__(self, query: Query, strategy: RedisCacheStrategy):
-            self.strategy = strategy
+        def __init__(self, query: CacheQuery, fallback: Optional[partial]):
             self.query = query
+            self.cache = ServicesManager.services[self.query.service].cache_store
+            self.runner = fallback or self.cache.fetch_items
             self.refreshed_items: Optional[List[Any]] = None
 
         async def __aenter__(self) -> List[Any]:
-            if not ServicesManager.services:
-                raise Exception(
-                    "Cache cannot be traversed before Services are initialized")
-            if items_from_cache := await ServicesManager.services[self.query.service].cache_store.search_items():
+            if items_from_cache := await self.cache.search_items(item_key=self.query.item_key):
                 return items_from_cache
-            if fetched_items := await ServicesManager.services[self.query.service].cache_store.fetch_items():
+            if fetched_items := await self.runner():
                 self.refreshed_items = fetched_items
                 return fetched_items
-            return []
+            raise QueryException(
+                f"Unable to produce any results from this query. Neither the cache nor the network were able to produce items.")
 
         async def __aexit__(self, *args, **kwargs) -> None:
-            if not ServicesManager.services:
-                raise Exception(
-                    "CacheTraveller has nothing to travel if Services are not initialized")
             if self.refreshed_items:
-                await ServicesManager.services[self.query.service].cache_store.update_on_filtered_fresh(
+                await self.cache.update_on_filtered_fresh(
                     self.refreshed_items)
-                pretty_log("Cache: Ouch, cache miss on", str(self.query))
+                LOGGER.info("Cache: Ouch, cache miss on",
+                           str(self.query))
 
     @staticmethod
-    async def autorefresh_services_stores(interval: int = 60) -> None:
-        """ 
-        Every minute, iterate over all registered services, refreshing all those that want it.
-        Acquires and release a 'lock' at the beginning, respectively at the end of the function body.
-        """
-        ServicesManager.auto_refresh_worker_locked = True
-        await asyncio.sleep(interval)
-        if not ServicesManager.services:
-            return
-        tasks: List[Coroutine] = []
-
-        async def fetch_then_update(serv_name: str) -> Dict[str, str]:
-            try:
-                if items := await ServicesManager.services[serv_name].cache_store.fetch_items():
-                    await ServicesManager.services[serv_name].cache_store.update_on_filtered_fresh(
-                        items)
-                    return {"service_name": serv_name, "ok": ""}
-                return {"service_name": serv_name, "error": "Unable to fetch!"}
-            except Exception as error:
-                return {"service_name": serv_name, "error": str(error)}
-
-        for serv_name, serv in ServicesManager.services.items():
-            if strat := serv.template.cache_strategy:
-                if strat.autorefresh:
-                    tasks.append(fetch_then_update(serv_name))
-        await asyncio.gather(*tasks)
-        ServicesManager.auto_refresh_worker_last_run = datetime.now()
-        ServicesManager.auto_refresh_worker_locked = False
-        asyncio.create_task(Run.autorefresh_services_stores())
-
-    @staticmethod
-    async def query(query: Query) -> QueryResponse:
+    async def query(query: CacheQuery, fallback: Optional[partial] = None) -> QueryResponse:
         """ Tries to run the given query, doing all the caching work along the way. A 'finally' clause might
         be in order. """
         if not ServicesManager.services:
             raise QueryException(
                 "Services need to be initialized before running a query.")
         try:
-            if redis_strat := ServicesManager.services[query.service].template.cache_strategy.redis:
-                async with Run.Cache(query, redis_strat) as result:
-                    return QueryResponse(query=query, results_count=len(result))
-            else:
-                raise QueryException(
-                    "No cache strategy for Redis, while Redis is our only caching solution as of your query.")
+            async with Run.Cache(query, fallback) as result:
+                return QueryResponse(query=query, results_count=len(result))
         except QueryException as err:
             return QueryResponse(query=query, error=f"Unable to satisfy this query for this reason: {err}")
         except Exception as err:
