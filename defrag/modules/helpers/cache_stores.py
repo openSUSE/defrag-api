@@ -69,7 +69,6 @@ class Store:
             self.filter_fresh_items(items))
         return None
 
-
 class QStore(Store):
     """
     Subclass specializing in 'RedisQueue' cache objects.
