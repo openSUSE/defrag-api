@@ -38,3 +38,11 @@ class QueryResponse(BaseModel):
     results: Optional[List[Any]] = None
     error: Optional[str] = None
     
+class QueryObject:
+    '''This should be deprecated in the future'''
+    def __init__(self, query: {}):
+        self.context = query
+    
+    def __repr__(self):
+        return "<Query Object>"
+

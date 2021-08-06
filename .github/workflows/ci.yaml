@@ -17,15 +17,21 @@
 name: Run Python Tests
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - dev
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+      - dev
 
 jobs:
   tests:
     # TODO: It would be nice to run this on openSUSE
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        redis-version: [6]
     steps:
       - uses: actions/checkout@v2
       - name: Install Python 3
@@ -36,5 +42,11 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install -r requirements-pytest.txt
+      - name: Start Redis
+        uses: supercharge/redis-github-action@1.2.0
+        with:
+          redis-version: ${{ matrix.redis-version }}
       - name: Run tests with pytest
         run: pytest
+
