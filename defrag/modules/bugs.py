@@ -2,11 +2,10 @@ import asyncio
 from functools import partial
 from bugzilla.base import Bugzilla
 from pydantic.main import BaseModel
-from defrag.modules import LOGGER
 from defrag.modules.helpers import CacheQuery, QueryResponse
 from defrag.modules.helpers.services_manager import Run, ServiceTemplate, ServicesManager
 from defrag.modules.helpers.cache_stores import CacheStrategy, DStore, RedisCacheStrategy
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional
 from defrag import app
 from defrag.modules.helpers.sync_utils import as_async
 from defrag.modules.helpers.exceptions import ParsingException
@@ -37,26 +36,20 @@ class BugzillaQueryEntry(BaseModel):
         return f"https://{URL}/show_bug.cgi?id={self.bug_id}"
 
     def __iter__(self):
-        # Now you can iterate over these instances dict-style: `for k, v in entry: ...` 
+        # Now you can iterate over these instances dict-style: `for k, v in entry: ...`
         for attr, value in self.dict().items():
             yield attr, value
 
 
-class BugzillaResponse(BaseModel):
-    # To capture query results. I suggest one field to just copy the original query.
-    query: BugzillaQueryEntry
-    results: Optional[List[BugzillaQueryEntry]]
-    error: Optional[str]
-
-
 def login() -> Bugzilla:
     global bzapi
-    handler = bugzilla.Bugzilla(url=URL, user=env["BUGZILLA_USER"], password=env["BUGZILLA_PASSWORD"])
+    handler = bugzilla.Bugzilla(
+        url=URL, user=env["BUGZILLA_USER"], password=env["BUGZILLA_PASSWORD"])
     if not handler.logged_in:
         raise Exception(
             "Login failed. Please double-check the credentials provided by your environment.")
     bzapi = handler
-    return handler # needed for the tests
+    return handler  # needed for the tests
 
 
 async def get_this_bug(bug_id: int) -> BugzillaQueryEntry:
@@ -94,7 +87,7 @@ async def search_bugs_with_term(term: str) -> List[int]:
                 bz_result_count = soup.find(
                     "span", {"class": "bz_result_count"})
                 if bz_result_count.find("span", {"class": "zero_results"}) is None:
-                    # I think we can just use the length of the list or? 
+                    # I think we can just use the length of the list or?
                     """ count = re.findall(r'\d+', bz_result_count.text)[0] """
                     bz_buglist = soup.find(
                         "table", {
@@ -129,7 +122,7 @@ class BugzillaStore(DStore):
 
     If we assume that your cache store is RedisDict, pottery's dict-like datastructure,
     refreshing your entire store is as simple as reassigning on every key.
-    
+
     The update is defined in 'cache_store.py:DStore:update_container_return_fresh_items` because
     it is generic to any store using this type of datastructure.
     """
@@ -188,4 +181,4 @@ async def search(query: BugzillaQueryEntry) -> QueryResponse:
     # declares what function to run if the item the request is looking for cannot find it in the cache store
     fallback = partial(search_all_bugs, query)
     # run the request
-    return await Run.query(CacheQuery(item_key=query.bug_id), fallback)
+    return await Run.query(CacheQuery(service="bugzilla"), fallback)

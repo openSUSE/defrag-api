@@ -199,7 +199,7 @@ class Run:
                 await self.cache.update_on_filtered_fresh(
                     self.refreshed_items)
                 LOGGER.info("Cache: Ouch, cache miss on",
-                           str(self.query))
+                            str(self.query))
 
     @staticmethod
     async def query(query: CacheQuery, fallback: Optional[partial] = None) -> QueryResponse:
@@ -209,8 +209,8 @@ class Run:
             raise QueryException(
                 "Services need to be initialized before running a query.")
         try:
-            async with Run.Cache(query, fallback) as result:
-                return QueryResponse(query=query, results_count=len(result))
+            async with Run.Cache(query, fallback) as results:
+                return QueryResponse(query=query, results=results, results_count=len(results))
         except QueryException as err:
             return QueryResponse(query=query, error=f"Unable to satisfy this query for this reason: {err}")
         except Exception as err:
