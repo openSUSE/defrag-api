@@ -5,37 +5,37 @@ It seems to us that openUSE has many niche places that don't talk to each other 
 
 Also, events and activities are not always visible and more often than not, people would find out about a community event or an outage when it's too late.
 
-We suspect that this kind of fragmentation and opacity make it more difficult than necessary for new users to onboard the openSUSE Project and for users to enjoy it as much as it deserves.
+We suspect that this kind of fragmentation and opacity makes it more difficult than necessary for new users to onboard the openSUSE Project and for users to enjoy it as much as it deserves.
 
 Our hope is that in so doing we will also help strengthen the bounds between people, teams and communities.
 
 ## Features
-- [] => not implemented
+- - [ ] => not implemented
 - [...] => work in progress
-- [x] => implemented
+- - [x] => implemented
 
 ### Middlewares
-_Cross-platform (Matrix, Telegram) moderation_ (depends on: https://github.com/KaratekHD/defrag/projects/2#card-64817715)
-- [] implement CAPTCHA with emojis
-- [] (partially implemented in karatekbot) implement moderation tools (globally)
-- [] implement roles & badges for users (globally)
+_Cross-platform (Matrix, Telegram) moderation_ (depends on: https://github.com/openSUSE/defrag-api/projects/2#card-64817715)
+- - [ ] implement CAPTCHA (e.g. with emojis)
+- - [ ] (partially implemented in [openGM](https://github.com/KaratekHD/Nemesis)) implement moderation tools (globally)
+- - [ ] implement roles & badges for users (globally)
 
-### On-demand (poll-based)
-- [] send service alerts
-- [] send community announcements
-- [] probe and list external services for status (unknown issue | undergoing maintenance | ups and downs | all good
 ### Broadcast (push-based)
-- [] probe and list external services for status (unknown issue | undergoing maintenance | ups and downs | all good
+- - [ ] send service alerts
+- - [ ] send community announcements
+- - [ ] probe and list external services for status (unknown issue | undergoing maintenance | ups and downs | all good
+### On-demand (poll-based)
+- - [ ] probe and list external services for status (unknown issue | undergoing maintenance | ups and downs | all good
 - list recent news / events / contribution opportunities:
     - [x] Reddit
     - [x] Twitter
-- [] search forum posts
-- [] search wiki
+- - [ ] search forum posts
+- - [ ] search wiki
 - [...] search bugs on bugzilla
-- [] search openSUSE documentation
-- [] search Factory + Pre-Factory packages with zypper + opi
-- [] search for Progress / Pagure
-- [] search for people/activities/events
+- - [ ] search openSUSE documentation
+- - [ ] search Factory + Pre-Factory packages with zypper + opi
+- - [ ] search for Progress / Pagure
+- - [ ] search for people/activities/events
 
 ## How to contribute?
 1. Set up your environment.
@@ -57,4 +57,4 @@ __Important to keep in mind__:
 ## Set up your environment
 - a virtual environment, such as `pipenv`, `virtualenv`, `venv`, etc. See [this page](https://towardsdatascience.com/comparing-python-virtual-environment-tools-9a6543643a44) for ideas.
 - a Python 3.8 interpreter run from the CPython runtime (the default one)
-- a static type checker such as [pyright](https://github.com/microsoft/pyright) (I am using it through [Pylance](https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-pylance)).
+- a static type checker such as [pyright](https://github.com/microsoft/pyright) (We are using it through [Pylance](https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-pylance) and [coc-pyright](https://github.com/fannheyward/coc-pyright)).
