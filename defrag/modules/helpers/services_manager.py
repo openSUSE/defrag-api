@@ -110,7 +110,7 @@ class ServicesManager:
         if not cls.services.keys():
             asyncio.create_task(cls.start_monitor())
         cls.services[name] = service
-        LOGGER.info("Registered: ", name)
+        LOGGER.info("Registered: " + name)
 
     @classmethod
     async def enable_disable(cls, service_name: str, on: bool) -> None:
