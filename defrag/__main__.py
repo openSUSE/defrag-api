@@ -27,11 +27,11 @@ def main() -> None:
     for module_name in ALL_MODULES:
         imported_module = importlib.import_module(
             "defrag.modules." + module_name)
-        if not hasattr(imported_module, "__mod_name__"):
-            imported_module.__mod_name__ = imported_module.__name__
-        LOGGER.debug("Loaded Module {}".format(imported_module.__mod_name__))
-        if not imported_module.__mod_name__.lower() in IMPORTED:
-            IMPORTED[imported_module.__mod_name__.lower()] = imported_module
+        if not hasattr(imported_module, "__MOD_NAME__"):
+            imported_module.__MOD_NAME__ = imported_module.__name__
+        LOGGER.debug("Loaded Module {}".format(imported_module.__MOD_NAME__))
+        if not imported_module.__MOD_NAME__.lower() in IMPORTED:
+            IMPORTED[imported_module.__MOD_NAME__.lower()] = imported_module
         else:
             # NO_TWO_MODULES
             raise Exception(

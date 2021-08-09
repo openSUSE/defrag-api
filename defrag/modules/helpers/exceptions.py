@@ -8,33 +8,28 @@
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import logging
-from fastapi import FastAPI
-
-LOGGER = logging.getLogger(__name__)
-# TODO: Change the logformat so that it fits uvicorn
-LOGFORMAT = "[%(asctime)s | %(levelname)s] %(message)s"
-DEBUG = True
-if DEBUG:
-    logging.basicConfig(
-        format=LOGFORMAT,
-        level=logging.DEBUG)
-else:
-    logging.basicConfig(
-        format=LOGFORMAT,
-        level=logging.INFO)
-
-NO_LOAD = []
-LOAD = []
+class DefragException(Exception):
+    '''Base class for other exceptions'''
+    def __init__(self, message=""):
+        self.message = message
+        super().__init__(self.message)
 
 
-# Initialize app
-app = FastAPI()
+class BugzillaException(DefragException):
+    '''Raised when a python-bugzilla error occures.'''
+    pass
 
 
+class ParsingException(DefragException):
+    '''Raised when something goes wrong while parsing a webpage.'''
+    pass
+
+class NetworkException(DefragException):
+    '''Raised when a network error occures.'''
+    pass

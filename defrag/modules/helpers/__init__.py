@@ -25,11 +25,11 @@ from pydantic.main import BaseModel
 
 class Query(BaseModel):
     service: str
+
+
+class CacheQuery(Query):
+    service: str
     item_key: Optional[Union[int, str]] = None
-
-
-class PostQuery(Query):
-    payload: Dict[Any, Any]
 
 
 class QueryResponse(BaseModel):
@@ -37,4 +37,3 @@ class QueryResponse(BaseModel):
     results_count: Optional[int] = None
     results: Optional[List[Any]] = None
     error: Optional[str] = None
-    
