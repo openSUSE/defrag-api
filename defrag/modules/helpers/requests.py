@@ -15,17 +15,21 @@ class Req:
 
     @classmethod
     def get_session(cls) -> ClientSession:
-        if not cls.session:
+        if not cls.session or cls.session.closed:
             cls.session = ClientSession()
         return cls.session
 
-    def __init__(self, url: str, verb: str = "GET", json: Optional[Dict[AnyStr, AnyStr]] = None, closeOnResponse: bool = True) -> None:
+    @classmethod
+    async def close_session(cls) -> None:
+        if cls.session and not cls.session.closed:
+            await cls.session.close()
+
+    def __init__(self, url: str, verb: Optional[str] = "GET", json: Optional[Dict[AnyStr, AnyStr]] = None, closeOnResponse: Optional[bool] = True) -> None:
         if json:
             self.json = json
         self.verb = verb
         self.url = url
         self.closeOnResponse = closeOnResponse
-        self.session = self.get_session()
 
     async def __aenter__(self) -> Any:
         # Fix me: this is not an appropriate return type, but the library does not seem to expose the right type.
@@ -34,12 +38,12 @@ class Req:
                 raise self.ReqException(
                     f"This verb is not implemented {self.verb}")
             if self.verb == "GET":
-                return await self.session.get(self.url)
+                return await self.get_session().get(self.url)
             if self.verb == "POST":
                 if not self.json:
                     raise self.ReqException(
                         f"POST-ing requires passing a json argument, as in `Req(ulr, verb='GET', json=...)`.")
-                return await self.session.post(self.url, json=self.json)
+                return self.get_session().post(self.url, json=self.json)
         except aiohttp.ClientResponseError as exp:
             raise NetworkException(f"{exp.status}: {exp.message}")
         except aiohttp.ServerTimeoutError as exp:
@@ -47,4 +51,4 @@ class Req:
 
     async def __aexit__(self, *args, **kwargs) -> None:
         if self.closeOnResponse:
-            await self.session.close()
+            await self.close_session()

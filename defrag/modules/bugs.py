@@ -78,14 +78,14 @@ async def get_this_bug(bug_id: int) -> BugzillaQueryEntry:
 
 async def search_bugs_with_term(term: str) -> List[int]:
     # the parser seems to choke on something. You think you can fix?
-    result = []
-    async with Req(f"https://bugzilla.opensuse.org/buglist.cgi?quicksearch={term}") as response:
-        try:
+    try:
+        async with Req(f"https://bugzilla.opensuse.org/buglist.cgi?quicksearch={term}") as response:
             if response.status == 200:
                 text = await response.text()
                 soup = BeautifulSoup(text, "lxml")
                 bz_result_count = soup.find(
                     "span", {"class": "bz_result_count"})
+                result = []
                 if bz_result_count.find("span", {"class": "zero_results"}) is None:
                     # I think we can just use the length of the list or?
                     """ count = re.findall(r'\d+', bz_result_count.text)[0] """
@@ -99,13 +99,12 @@ async def search_bugs_with_term(term: str) -> List[int]:
                         if len(columns) == 8:
                             id = int(columns[0].text.replace("\n", ""))
                             result.append(id)
+                return result
             else:
                 raise ParsingException("Unknown error occured")
         # moved your exceptions catchers to the Req class. Thank you for them!
-        except Exception as exp:
-            raise exp
-    return result
-
+    except Exception as exp:
+        raise exp
 
 async def search_all_bugs(query: BugzillaQueryEntry):
     if not query.search_string:
@@ -113,7 +112,12 @@ async def search_all_bugs(query: BugzillaQueryEntry):
     bugs_ids = await search_bugs_with_term(query.search_string)
     if not bugs_ids:
         return []
-    return await asyncio.gather(*[get_this_bug(bug_id) for bug_id in bugs_ids])
+    results = []
+    # careful, apparently if we launch all coroutines concurrently or remove the limit, the 
+    # server denies us!
+    for res in asyncio.as_completed([get_this_bug(bug_id) for n, bug_id in enumerate(bugs_ids) if n < 26]):
+        results.append(await res)
+    return results
 
 
 class BugzillaStore(DStore):

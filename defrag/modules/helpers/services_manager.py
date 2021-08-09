@@ -107,8 +107,8 @@ class ServicesManager:
         Registers a service, making sure en passant that the refreshing worker is being run on time
         and only if it's not running already. 
         """
-        if not cls.services.keys():
-            asyncio.create_task(cls.start_monitor())
+        # if not cls.services.keys():
+        #    asyncio.create_task(cls.start_monitor())
         cls.services[name] = service
         LOGGER.info("Registered: " + name)
 
