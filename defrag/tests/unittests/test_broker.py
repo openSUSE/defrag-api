@@ -31,4 +31,5 @@ async def test_broker():
     await MessagesBroker.put(message1)
     await MessagesBroker.put(message2)
     await asyncio.sleep(5)
-    assert len(MessagesBroker.process_q) + len(MessagesBroker.scheduled_q) == 0
+    assert MessagesBroker.process_q.empty()
+    assert len(MessagesBroker.scheduled) == 0
