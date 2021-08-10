@@ -162,7 +162,7 @@ def register_service():
 @app.get("/" + __MOD_NAME__ + "/bug/{bug_id}")
 async def get_bug(bug_id: int) -> QueryResponse:
     # declares how this request should interface with the cache
-    cache_query = CacheQuery(service="bugzilla", item_key=bug_id)
+    cache_query = CacheQuery(service="bugs", item_key=bug_id)
     # declares what function to run if the item the request is looking for cannot find it in the cache store
     fallback = partial(get_this_bug, bug_id)
     # run the request
@@ -180,9 +180,9 @@ async def search(query: BugzillaQueryEntry) -> QueryResponse:
     # but perhaps the user did't pick the right endpoint has passed a bug id?
     if query.bug_id:
         fallback = partial(get_this_bug, query.bug_id)
-        cache_query = CacheQuery(service="bugzilla", item_key=query.bug_id)
+        cache_query = CacheQuery(service="bugs", item_key=query.bug_id)
         return await Run.query(cache_query, fallback)
     # declares what function to run if the item the request is looking for cannot find it in the cache store
     fallback = partial(search_all_bugs, query)
     # run the request
-    return await Run.query(CacheQuery(service="bugzilla"), fallback)
+    return await Run.query(CacheQuery(service="bugs"), fallback)
