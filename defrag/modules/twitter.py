@@ -1,7 +1,7 @@
 from defrag.modules.helpers import Query
 from collections import namedtuple
 from defrag import app
-from defrag.modules.helpers.caching import CacheStrategy, QStore, RedisCacheStrategy
+from defrag.modules.helpers.cache_stores import CacheStrategy, QStore, RedisCacheStrategy
 from defrag.modules.helpers.data_manipulation import compose
 from defrag.modules.helpers.sync_utils import as_async
 from defrag.modules.helpers.services_manager import Run, ServiceTemplate, ServicesManager
