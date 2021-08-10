@@ -1,5 +1,5 @@
 from defrag.modules.db.redis import RedisPool
-from defrag.modules.helpers.caching import RedisCacheStrategy
+from defrag.modules.helpers.cache_stores import RedisCacheStrategy
 from defrag.modules.helpers import Query, QueryResponse
 from defrag.modules.helpers.services_manager import Run
 from defrag.modules.reddit import register_service as register_reddit
