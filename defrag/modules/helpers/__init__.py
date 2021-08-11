@@ -25,6 +25,7 @@ from pydantic.main import BaseModel
 
 class Query(BaseModel):
     service: str
+    item_key: Optional[Union[int, str]]
 
 
 class CacheQuery(Query):

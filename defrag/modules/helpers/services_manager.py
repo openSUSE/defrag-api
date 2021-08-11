@@ -168,7 +168,7 @@ class ServicesManager:
 class Run:
     """
     This class maintains no inner state, it just holds some stateless functions
-    taking a request against and returning a response, traversing the 
+    taking a request against and returning a response, but not before traversing the 
     cache corresponding to the service responsible for handling the request.
     """
 
@@ -186,7 +186,10 @@ class Run:
             self.refreshed_items: Optional[List[Any]] = None
 
         async def __aenter__(self) -> List[Any]:
-            if items_from_cache := await self.cache.search_items(item_key=self.query.item_key):
+            if not ServicesManager.services:
+                raise Exception(
+                    "Cache cannot be traversed before Services are initialized")
+            if items_from_cache := ServicesManager.services[self.query.service].cache_store.search_items():
                 return items_from_cache
             if fetched_items := await self.runner():
                 self.refreshed_items = fetched_items
