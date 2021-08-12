@@ -58,3 +58,6 @@ __Important to keep in mind__:
 - a virtual environment, such as `pipenv`, `virtualenv`, `venv`, etc. See [this page](https://towardsdatascience.com/comparing-python-virtual-environment-tools-9a6543643a44) for ideas.
 - a Python 3.8 interpreter run from the CPython runtime (the default one)
 - a static type checker such as [pyright](https://github.com/microsoft/pyright) (We are using it through [Pylance](https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-pylance) and [coc-pyright](https://github.com/fannheyward/coc-pyright)).
+
+## Contribute!
+Helpful resources: https://www.dataschool.io/how-to-contribute-on-github/
