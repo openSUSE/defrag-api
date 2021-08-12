@@ -161,9 +161,6 @@ def register_service():
 
 @app.get("/" + __MOD_NAME__ + "/bug/{bug_id}")
 async def get_bug(bug_id: int) -> QueryResponse:
-    # ensures login
-    if not bzapi.logged_in:
-        login()
     # declares how this request should interface with the cache
     cache_query = CacheQuery(service="bugs", item_key=bug_id)
     # declares what function to run if the item the request is looking for cannot find it in the cache store
