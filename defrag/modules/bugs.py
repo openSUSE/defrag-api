@@ -1,5 +1,6 @@
 import asyncio
 from functools import partial
+import logging
 from bugzilla.base import Bugzilla
 from pydantic.main import BaseModel
 from defrag.modules.helpers import Query, CacheQuery, QueryResponse
@@ -58,6 +59,8 @@ async def get_this_bug(bug_id: int) -> BugzillaQueryEntry:
     """
     try:
     """
+    if not bzapi.logged_in:
+        login()
     bug = await as_async(bzapi.getbug)(bug_id)
     building_bug = BugzillaQueryEntry()
     for attr, _ in building_bug:
@@ -158,6 +161,9 @@ def register_service():
 
 @app.get("/" + __MOD_NAME__ + "/bug/{bug_id}")
 async def get_bug(bug_id: int) -> QueryResponse:
+    # ensures login
+    if not bzapi.logged_in:
+        login()
     # declares how this request should interface with the cache
     cache_query = CacheQuery(service="bugs", item_key=bug_id)
     # declares what function to run if the item the request is looking for cannot find it in the cache store
@@ -173,11 +179,8 @@ async def root() -> QueryResponse:
 
 @app.get("/" + __MOD_NAME__ + "/search/")
 async def search(term: str) -> QueryResponse:
-    query = BugzillaQueryEntry
-    query.search_string = term
+    query = BugzillaQueryEntry(search_string=term)
     result = await search_all_bugs(query)
     # This is not as fancy as it was before, but now it actually works.
     # Plus, before id didn't cache anyway, so this should be fine. We can still make it better in the future
     return QueryResponse(query=Query(service="bugs"), results_count=len(result), results=result)
-
-login()
