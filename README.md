@@ -54,10 +54,10 @@ __Important to keep in mind__:
 2. If your Pull Request introduces a new function, it must feature a new unittest using `pytest` for it, unless your function is consumed by another function which is introduced in the same Pull Request and which does have a corresponding unittest. (Later we will need to have 1 unittest for each function though.)
 3. Try to squash your commits on your Pull Requests to avoid noise.
 
-## Set up your environment
+### Set up your environment
 - a virtual environment, such as `pipenv`, `virtualenv`, `venv`, etc. See [this page](https://towardsdatascience.com/comparing-python-virtual-environment-tools-9a6543643a44) for ideas.
 - a Python 3.8 interpreter run from the CPython runtime (the default one)
 - a static type checker such as [pyright](https://github.com/microsoft/pyright) (We are using it through [Pylance](https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-pylance) and [coc-pyright](https://github.com/fannheyward/coc-pyright)).
 
-## Contribute!
-Helpful resources: https://www.dataschool.io/how-to-contribute-on-github/
+### Helpers to get started with GitHub
+- https://www.dataschool.io/how-to-contribute-on-github/
