@@ -77,7 +77,6 @@ async def get_this_bug(bug_id: int) -> BugzillaQueryEntry:
 
 
 async def search_bugs_with_term(term: str) -> List[int]:
-    # the parser seems to choke on something. You think you can fix?
     try:
         async with Req(f"https://bugzilla.opensuse.org/buglist.cgi?quicksearch={term}") as response:
             if response.status == 200:
@@ -87,8 +86,6 @@ async def search_bugs_with_term(term: str) -> List[int]:
                     "span", {"class": "bz_result_count"})
                 result = []
                 if bz_result_count.find("span", {"class": "zero_results"}) is None:
-                    # I think we can just use the length of the list or?
-                    """ count = re.findall(r'\d+', bz_result_count.text)[0] """
                     bz_buglist = soup.find(
                         "table", {
                             "class": "bz_buglist"}).findAll(
@@ -102,7 +99,6 @@ async def search_bugs_with_term(term: str) -> List[int]:
                 return result
             else:
                 raise ParsingException("Unknown error occured")
-        # moved your exceptions catchers to the Req class. Thank you for them!
     except Exception as exp:
         raise exp
 
