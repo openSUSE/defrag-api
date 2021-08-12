@@ -1,5 +1,5 @@
 from typing import Any, List
-from defrag.modules.helpers.caching import QStore
+from defrag.modules.helpers.cache_stores import QStore
 from defrag.modules.db.redis import RedisPool
 import asyncio
 import pytest
