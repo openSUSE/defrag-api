@@ -2,7 +2,7 @@ import asyncio
 from functools import partial
 from bugzilla.base import Bugzilla
 from pydantic.main import BaseModel
-from defrag.modules.helpers import CacheQuery, QueryResponse
+from defrag.modules.helpers import Query, CacheQuery, QueryResponse
 from defrag.modules.helpers.services_manager import Run, ServiceTemplate, ServicesManager
 from defrag.modules.helpers.cache_stores import CacheStrategy, DStore, RedisCacheStrategy
 from typing import Any, List, Optional
@@ -116,7 +116,8 @@ async def search_all_bugs(query: BugzillaQueryEntry):
     # careful, apparently if we launch all coroutines concurrently or remove the limit, the 
     # server denies us!
     for res in asyncio.as_completed([get_this_bug(bug_id) for n, bug_id in enumerate(bugs_ids) if n < 26]):
-        results.append(await res)
+        model = await res
+        results.append({**model.dict(exclude_unset=True), **model.dict(exclude_none=True)}) 
     return results
 
 
@@ -175,14 +176,12 @@ async def root() -> QueryResponse:
 
 
 @app.get("/" + __MOD_NAME__ + "/search/")
-async def search(query: BugzillaQueryEntry) -> QueryResponse:
-    # declares how this request should interface with the cache
-    # but perhaps the user did't pick the right endpoint has passed a bug id?
-    if query.bug_id:
-        fallback = partial(get_this_bug, query.bug_id)
-        cache_query = CacheQuery(service="bugs", item_key=query.bug_id)
-        return await Run.query(cache_query, fallback)
-    # declares what function to run if the item the request is looking for cannot find it in the cache store
-    fallback = partial(search_all_bugs, query)
-    # run the request
-    return await Run.query(CacheQuery(service="bugs"), fallback)
+async def search(term: str) -> QueryResponse:
+    query = BugzillaQueryEntry
+    query.search_string = term
+    result = await search_all_bugs(query)
+    # This is not as fancy as it was before, but now it actually works.
+    # Plus, before id didn't cache anyway, so this should be fine. We can still make it better in the future
+    return QueryResponse(query=Query(service="bugs"), results_count=len(result), results=result)
+
+login()
