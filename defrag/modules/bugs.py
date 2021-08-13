@@ -3,7 +3,7 @@ from functools import partial
 from bugzilla.base import Bugzilla
 from pydantic.main import BaseModel
 from defrag.modules.helpers import CacheQuery, QueryResponse
-from defrag.modules.helpers.services_manager import Run, ServiceTemplate, ServicesManager
+from defrag.modules.helpers.services_manager import CachedServiceTemplate, Run, ServicesManager
 from defrag.modules.helpers.cache_stores import CacheStrategy, DStore, RedisCacheStrategy
 from typing import Any, List, Optional
 from defrag import app
@@ -148,7 +148,7 @@ def register_service():
     # declares how the cache beaviour should be for this service
     bugzilla_strategy = CacheStrategy(
         RedisCacheStrategy(populate_on_startup=False, auto_refresh=False, auto_refresh_delay=None, runner_timeout=None, cache_decay=None), None)
-    bugzilla = ServiceTemplate(name=__MOD_NAME__, cache_strategy=bugzilla_strategy,
+    bugzilla = CachedServiceTemplate(name=__MOD_NAME__, cache_strategy=bugzilla_strategy,
                                endpoint=None, port=None, credentials=None, custom_parameters=None)
     # connects together the cache behaviour and the actual cache store
     # notice the `dict_key` parameter: it is used to tell the cache that if you pass it a list of

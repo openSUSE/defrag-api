@@ -23,7 +23,7 @@ Some utilities for doing data manipulation.
 
 
 def compose(*funcs: Tuple[Callable]) -> Callable:
-    """ Compose multiple functions (right-associative) """
+    """ Compose multiple functions (left-associative) """
     def step(acc, f):
         return f(acc)
 

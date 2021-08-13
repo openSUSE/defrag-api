@@ -28,11 +28,18 @@ class Controllers:
 class ServiceTemplate:
     """ Meant to be used as an immutable recipe for building a particular service """
     name: str
-    cache_strategy: CacheStrategy
     endpoint: Optional[str]
     port: Optional[int]
     credentials: Optional[Dict[Any, Any]]
     custom_parameters: Optional[Dict[Any, Any]]
+
+
+class CachedServiceTemplate(ServiceTemplate):
+    """
+    Meant to be used as an immutable recipe for building a particular service that requires
+    traversing the cache
+    """
+    cache_strategy: CacheStrategy
 
 
 @dataclass
@@ -40,11 +47,15 @@ class Service:
     """ Meant to be used a mutable service registered against the ServiceManager. """
     started_at: datetime
     template: ServiceTemplate
-    cache_store: Store
     is_enabled: bool = True
     is_running: bool = True
     shutdown_at: Optional[datetime] = None
     controllers: Optional[Controllers] = None
+
+
+class CachedService(Service):
+    """ Meant to be used a mutable cached service registered against the ServiceManager. """
+    cache_store: Store
 
 
 class Services(UserDict):
@@ -93,10 +104,11 @@ class ServicesManager:
     monitor_is_running: bool = False
 
     @staticmethod
-    def realize_service_template(templ: ServiceTemplate, store: Store, **init_state_override: Optional[Dict[str, Any]]) -> Service:
+    def realize_service_template(templ: ServiceTemplate, store: Optional[Store], **init_state_override: Optional[Dict[str, Any]]) -> Service:
         now = datetime.now()
-        init_state = {"started_at": now,
-                      "template": templ, "cache_store": store}
+        init_state = {"started_at": now, "template": templ}
+        if store:
+            init_state["store"] = store
         if init_state_override:
             init_state = {**init_state, **init_state_override}
         return Service(**init_state)
@@ -140,9 +152,12 @@ class ServicesManager:
         Acquires and release a 'lock' at the beginning, respectively at the end of the function body.
         """
         async def fetch_then_update(serv_name: str) -> None:
+            serv = cls.services[serv_name]
+            if not isinstance(serv, CachedService):
+                return
             try:
-                if items := await cls.services[serv_name].cache_store.fetch_items():
-                    await cls.services[serv_name].cache_store.update_on_filtered_fresh(
+                if items := await serv.cache_store.fetch_items():
+                    await serv.cache_store.update_on_filtered_fresh(
                         items)
                     LOGGER.info(f"Monitor: service {serv_name} was refreshed")
                 else:
@@ -180,8 +195,12 @@ class Run:
         """
 
         def __init__(self, query: CacheQuery, fallback: Optional[partial]):
+            serv = ServicesManager.services[self.query.service]
+            if not isinstance(serv, CachedService):
+                raise Exception(
+                    "Cannot traverse the cache for a service that has no cache.")
             self.query = query
-            self.cache = ServicesManager.services[self.query.service].cache_store
+            self.cache = serv.cache_store
             self.runner = fallback or self.cache.fetch_items
             self.refreshed_items: Optional[List[Any]] = None
 
