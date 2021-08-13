@@ -12,7 +12,7 @@ import json
 import sys
 from typing import Any, Dict, List, Tuple
 
-__MOD_NAME__ = "docs"
+__MOD_NAME__ = "documentation"
 
 
 class LunrDoc(BaseModel):
