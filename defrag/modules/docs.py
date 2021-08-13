@@ -108,7 +108,6 @@ def make_index_search_tumbleweed(tw_data: bytes, keywords: str) -> Tuple[Index, 
 async def make_search_set_indexes_in_parallel(keywords: str) -> List[Dict[str, Any]]:
 
     leap, tw = await asyncio.gather(get_data("leap"), get_data("tumbleweed"))
-    results = []
     sys.setrecursionlimit(0x100000)
     with ProcessPoolExecutor(max_workers=2) as executor:
         leap_worker = executor.submit(
@@ -119,8 +118,7 @@ async def make_search_set_indexes_in_parallel(keywords: str) -> List[Dict[str, A
         tw_index, tw_results = tw_worker.result()
         set_global_index("leap", leap_index)
         set_global_index("tumbleweed", tw_index)
-        results = leap_results + tw_results
-    return results
+        return leap_results + tw_results
 
 
 def search_indexes_in_parallel(keywords: str) -> List[Dict[str, Any]]:
@@ -129,8 +127,7 @@ def search_indexes_in_parallel(keywords: str) -> List[Dict[str, Any]]:
             search_index, **{"idx": indexes["leap"]["index"], "source": "leap", "keywords": keywords})
         tw_worker = executor.submit(
             search_index, **{"idx": indexes["tumbleweed"]["index"], "source": "tumbleweed", "keywords": keywords})
-        results = leap_worker.result() + tw_worker.result()
-    return results
+        return leap_worker.result() + tw_worker.result()
 
 
 @app.get("/" + __MOD_NAME__ + "/single/{source}/{keywords}")
@@ -160,4 +157,3 @@ def register():
     template = ServiceTemplate(__MOD_NAME__, None, None, None, None, None)
     service = ServicesManager.realize_service_template(template, None)
     ServicesManager.register_service(__MOD_NAME__, service)
-    
