@@ -64,7 +64,9 @@ __Important to keep in mind__:
 
 ## Design of this application
 __Architecture__
+
 ![Architecture](/services.png)
 
 __Handling logic__
+
 ![Handling logic](/handling_logic.png)
