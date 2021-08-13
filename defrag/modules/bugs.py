@@ -18,7 +18,7 @@ import bugzilla
 __MOD_NAME__ = "bugs"
 
 URL = "https://bugzilla.opensuse.org/xmlrpc.cgi"
-bzapi: bugzilla.Bugzilla
+bzapi = bugzilla.Bugzilla(url=URL)
 
 
 class BugzillaQueryEntry(BaseModel):
@@ -55,8 +55,6 @@ def login() -> Bugzilla:
 
 
 async def get_this_bug(bug_id: int) -> BugzillaQueryEntry:
-    # I was not really able to make something good out of this try...except block
-    # do change this is you have a good idea
     if not bzapi.logged_in:
         login()
     bug = await as_async(bzapi.getbug)(bug_id)
