@@ -32,22 +32,16 @@ class Req:
         self.closeOnResponse = closeOnResponse
 
     async def __aenter__(self) -> Any:
-        # Fix me: this is not an appropriate return type, but the library does not seem to expose the right type.
-        try:
-            if not self.verb in self.implemented_verbs:
+        if not self.verb in self.implemented_verbs:
+            raise self.ReqException(
+                f"This verb is not implemented {self.verb}")
+        if self.verb == "GET":
+            return await self.get_session().get(self.url)
+        if self.verb == "POST":
+            if not self.json:
                 raise self.ReqException(
-                    f"This verb is not implemented {self.verb}")
-            if self.verb == "GET":
-                return await self.get_session().get(self.url)
-            if self.verb == "POST":
-                if not self.json:
-                    raise self.ReqException(
-                        f"POST-ing requires passing a json argument, as in `Req(ulr, verb='GET', json=...)`.")
-                return self.get_session().post(self.url, json=self.json)
-        except aiohttp.ClientResponseError as exp:
-            raise NetworkException(f"{exp.status}: {exp.message}")
-        except aiohttp.ServerTimeoutError as exp:
-            raise NetworkException("Timeout.")
+                    f"POST-ing requires passing a json argument, as in `Req(ulr, verb='GET', json=...)`.")
+            return self.get_session().post(self.url, json=self.json)
 
     async def __aexit__(self, *args, **kwargs) -> None:
         if self.closeOnResponse:

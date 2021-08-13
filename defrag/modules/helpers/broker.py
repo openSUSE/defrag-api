@@ -60,9 +60,10 @@ class MessagesBroker:
     @staticmethod
     def prime_message(raw: RawMessage) -> Message:
         if not isinstance(raw, RawMessage):
-            raise Exception (f"Not a well-formed RawMessage: {str(raw)}")
+            raise Exception(f"Not a well-formed RawMessage: {str(raw)}")
         timestamp = datetime.now().timestamp()
-        message_keyvals = {"timestamp": timestamp, "message_id": hash(timestamp)}
+        message_keyvals = {"timestamp": timestamp,
+                           "message_id": hash(timestamp)}
         merged = {**raw.dict(), **message_keyvals}
         return Message(**merged)
 
@@ -74,47 +75,34 @@ class MessagesBroker:
 
     @classmethod
     async def put(cls, message: Dict[str, Any]) -> None:
-        try:
-            if message["scheduled"]:
-                return cls.scheduled.add(message)
-            cls.process_q.put_nowait(message)
-        except Exception as error:
-            LOGGER.error(f"Error when putting: {error}")
+        if message["scheduled"]:
+            return cls.scheduled.add(message)
+        cls.process_q.put_nowait(message)
 
     @classmethod
     async def start_polling_process(cls) -> None:
         LOGGER.info("Started to poll the process queue.")
-        try:
-            while True:
-                message = await cls.process_q.get()
-                await cls.dispatch(message)
-                cls.process_q.task_done()
-        except Exception as error:
-            LOGGER.error(error)
+        while True:
+            message = await cls.process_q.get()
+            await cls.dispatch(message)
+            cls.process_q.task_done()
 
     @classmethod
     async def start_ticking_clock(cls, interval: int = 1) -> None:
         """ Every second, concurrently consumes the entire scheduled set. """
         LOGGER.info("Started to monitor scheduled messages")
-        try:
-            while True:
-                await asyncio.sleep(interval)
-                now_timestamp = datetime.now().timestamp()
-                due: List[Dict[str, Any]] = [
-                    m for m in cls.scheduled if m["scheduled"] <= now_timestamp]
-                await asyncio.gather(*[cls.dispatch(m) for m in due])
-        except Exception as error:
-            LOGGER.error(error)
+        while True:
+            await asyncio.sleep(interval)
+            now_timestamp = datetime.now().timestamp()
+            due: List[Dict[str, Any]] = [
+                m for m in cls.scheduled if m["scheduled"] <= now_timestamp]
+            await asyncio.gather(*[cls.dispatch(m) for m in due])
 
     @classmethod
     def unschedule(cls, message_id: int) -> None:
-        try:
-            found = [m for m in cls.scheduled if m["message_id"] == message_id]
-            if found:
-                cls.unscheduled_messages_ids.add(message_id)
-        except Exception as error:
-            LOGGER.error(
-                f"Error while cancelled message {str(message_id)}: {error}")
+        found = [m for m in cls.scheduled if m["message_id"] == message_id]
+        if found:
+            cls.unscheduled_messages_ids.add(message_id)
 
     @classmethod
     async def dispatch(cls, message: Dict[str, Any]) -> None:
