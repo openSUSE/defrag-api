@@ -16,7 +16,7 @@
 
 import asyncio
 from functools import partial, wraps
-from typing import Awaitable, Callable, Iterable
+from typing import Callable
 
 """
 We want to use `as_async` and `to_async` in all these cases where we need to 
@@ -41,13 +41,3 @@ def as_async(f: Callable) -> Callable:
         f_saturated = partial(f, *args, **kwargs)
         return await loop.run_in_executor(None, f_saturated)
     return inner
-
-
-async def iterate_off_thread(f: Callable, iterable: Iterable):
-    def inner(): return [f() for _ in iterable]
-    return await as_async(inner)()
-
-
-async def map_off_thread(f: Callable, iterable: Iterable):
-    def inner(): return [f(x) for x in iterable]
-    return await as_async(inner)()
