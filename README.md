@@ -61,3 +61,10 @@ __Important to keep in mind__:
 
 ### Helpers to get started with GitHub
 - https://www.dataschool.io/how-to-contribute-on-github/
+
+## Design of this application
+__Architecture__
+![Architecture](/services.png)
+
+__Handling logic__
+![Handling logic](/handling_logic.png)
