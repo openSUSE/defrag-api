@@ -28,7 +28,7 @@ class Controllers:
 class ServiceTemplate:
     """ Meant to be used as an immutable recipe for building a particular service """
     name: str
-    cache_strategy: CacheStrategy
+    cache_strategy: Optional[CacheStrategy]
     endpoint: Optional[str]
     port: Optional[int]
     credentials: Optional[Dict[Any, Any]]
@@ -90,7 +90,7 @@ class ServicesManager:
     monitor_is_running: bool = False
 
     @staticmethod
-    def realize_service_template(templ: ServiceTemplate, store: Store, **init_state_override: Optional[Dict[str, Any]]) -> Service:
+    def realize_service_template(templ: ServiceTemplate, store: Optional[Store], **init_state_override: Optional[Dict[str, Any]]) -> Service:
         now = datetime.now()
         init_state = {"started_at": now,
                       "template": templ, "cache_store": store}
