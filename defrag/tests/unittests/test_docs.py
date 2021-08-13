@@ -15,7 +15,7 @@ async def test_register():
 
 
 def test_single_endpoint():
-    response = client.get("/docs/single/leap/zypper")
+    response = client.get("/documentation/single/leap/?keywords=zypper")
     assert response.status_code == 200
     results = response.json()["results"]
     print(results)
@@ -23,7 +23,7 @@ def test_single_endpoint():
 
 
 def test_merged_endpoint():
-    response = client.get("/docs/merged/zypper")
+    response = client.get("/documentation/merged/?keywords=zypper")
     assert response.status_code == 200
     results = response.json()["results"]
     print(results)
