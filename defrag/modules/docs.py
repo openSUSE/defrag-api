@@ -130,7 +130,7 @@ def search_indexes_in_parallel(keywords: str) -> List[Dict[str, Any]]:
         return leap_worker.result() + tw_worker.result()
 
 
-@app.get("/" + __MOD_NAME__ + "/single/{source}/{keywords}")
+@app.get("/" + __MOD_NAME__ + "/single/{source}/")
 async def search_single_source_docs(source: str, keywords: str) -> QueryResponse:
     if not ready_to_index([source]):
         if source == "tumbleweed":
