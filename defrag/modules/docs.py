@@ -1,5 +1,5 @@
 from defrag import app
-from defrag.modules.helpers.services_manager import Controllers, ServiceTemplate, ServicesManager
+from defrag.modules.helpers.services_manager import ServiceTemplate, ServicesManager
 from defrag.modules.helpers.requests import Req
 from defrag.modules.helpers import Query, QueryResponse
 from lunr import lunr
