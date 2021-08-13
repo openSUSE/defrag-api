@@ -17,6 +17,7 @@
 from defrag.modules.db.redis import RedisPool
 import uvicorn
 import importlib
+from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from defrag import app, LOGGER
 from defrag.modules import ALL_MODULES
 
@@ -46,6 +47,15 @@ async def register_modules_as_services() -> None:
     for service in IMPORTED.values():
         if hasattr(service, "register_service"):
             service.register_service()
+
+
+@app.get("/docs", include_in_schema=False)
+def overridden_swagger():
+	return get_swagger_ui_html(openapi_url="/openapi.json", title="FastAPI", swagger_favicon_url="https://static.opensuse.org/favicon.svg")
+
+@app.get("/redoc", include_in_schema=False)
+def overridden_redoc():
+	return get_redoc_html(openapi_url="/openapi.json", title="FastAPI", redoc_favicon_url="https://static.opensuse.org/favicon.svg")
 
 
 if __name__ == "__main__":
