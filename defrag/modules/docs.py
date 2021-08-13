@@ -142,7 +142,7 @@ async def search_single_source_docs(source: str, keywords: str) -> QueryResponse
     return QueryResponse(query=Query(service="search_docs"), results_count=len(results), results=results)
 
 
-@app.get("/" + __MOD_NAME__ + "/merged/{keywords}")
+@app.get("/" + __MOD_NAME__ + "/merged/")
 async def search_merging_sources_docs(keywords: str) -> QueryResponse:
     if not ready_to_index(["leap", "tumbleweed"]):
         results = await make_search_set_indexes_in_parallel(keywords)
