@@ -51,10 +51,7 @@ class Services(UserDict):
     """ A simple mapping from names to Services """
 
     def __getattr__(self, key: str):
-        try:
-            return self.data[key]
-        except KeyError:
-            print(f"No match for this service name: {key}")
+        return self.data[key]
 
     def __setitem__(self, key: str, item: Service) -> None:
         if not key in self.data:
@@ -114,24 +111,21 @@ class ServicesManager:
 
     @classmethod
     async def enable_disable(cls, service_name: str, on: bool) -> None:
-        try:
-            if not cls.services:
-                raise Exception(
-                    "You cannot enable or disable a service before Services have been initialized.")
-            if not service_name in cls.services:
-                raise Exception(f"Service not found: {service_name}")
-            if controllers := cls.services[service_name].controllers:
-                if on:
-                    await controllers.initialize()
-                    cls.services[service_name].is_enabled = True
-                else:
-                    await controllers.shutdown()
-                    cls.services[service_name].is_enabled = False
+
+        if not cls.services:
+            raise Exception(
+                "You cannot enable or disable a service before Services have been initialized.")
+        if not service_name in cls.services:
+            raise Exception(f"Service not found: {service_name}")
+        if controllers := cls.services[service_name].controllers:
+            if on:
+                await controllers.initialize()
+                cls.services[service_name].is_enabled = True
             else:
-                raise Exception("Cannot switchOnOff without controllers!")
-        except Exception as err:
-            LOGGER.warning(
-                f"Failed to enable this service: {service_name} for this reason {err}")
+                await controllers.shutdown()
+                cls.services[service_name].is_enabled = False
+        else:
+            raise Exception("Cannot switchOnOff without controllers!")
 
     @classmethod
     async def start_monitor(cls, interval: int = 60) -> None:
@@ -211,10 +205,5 @@ class Run:
         if not ServicesManager.services:
             raise QueryException(
                 "Services need to be initialized before running a query.")
-        try:
-            async with Run.Cache(query, fallback) as results:
-                return QueryResponse(query=query, results=results, results_count=len(results))
-        except QueryException as err:
-            return QueryResponse(query=query, error=f"Unable to satisfy this query for this reason: {err}")
-        except Exception as err:
-            return QueryResponse(query=query, error=f"A likely programming error occurred: {err}")
+        async with Run.Cache(query, fallback) as results:
+            return QueryResponse(query=query, results=results, results_count=len(results))
