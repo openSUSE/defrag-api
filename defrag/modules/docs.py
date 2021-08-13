@@ -156,6 +156,8 @@ async def search_merging_sources_docs(keywords: str) -> QueryResponse:
 
 
 def register():
+    asyncio.create_task(make_search_set_indexes_in_parallel(""))
     template = ServiceTemplate(__MOD_NAME__, None, None, None, None)
     service = ServicesManager.realize_service_template(template, None)
     ServicesManager.register_service(__MOD_NAME__, service)
+    
