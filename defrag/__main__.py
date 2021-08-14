@@ -14,41 +14,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from defrag.modules import ALL_MODULES
 from defrag.modules.tgrambot import start_bot
 from defrag.modules.db.redis import RedisPool
 import uvicorn
 import importlib
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from defrag import app, LOGGER
-<< << << < HEAD
+from defrag.modules import ALL_MODULES
 
 IMPORTED = {}
-
-
-def main():
-    for module_name in ALL_MODULES:
-        imported_module = importlib.import_module(
-            "defrag.modules." + module_name)
-        if not hasattr(imported_module, "__mod_name__"):
-            imported_module.__mod_name__ = imported_module.__name__
-        LOGGER.debug("Loaded Module {}".format(imported_module.__mod_name__))
-        if not imported_module.__mod_name__.lower() in IMPORTED:
-            IMPORTED[imported_module.__mod_name__.lower()] = imported_module
-        else:
-            # NO_TWO_MODULES
-            raise Exception(
-                "Can't have two modules with the same name! Please change one")
-
-
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
-== == == =
-
-IMPORTED = {}
-
->>>>>> > dev
 
 
 def main() -> None:
@@ -74,11 +48,6 @@ async def register_modules_as_services() -> None:
     for service in IMPORTED.values():
         if hasattr(service, "register_service"):
             service.register_service()
-
-
-@app.on_event("startup")
-def on_startup():
-    start_bot()
 
 
 @app.get("/docs", include_in_schema=False)
