@@ -33,5 +33,8 @@ else:
 NO_LOAD = []
 LOAD = []
 
+
 # Initialize app
-app = FastAPI()
+app = FastAPI(docs_url=None, redoc_url=None)
+
+

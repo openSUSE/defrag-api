@@ -8,17 +8,33 @@
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from defrag import app
+from typing import Dict, Any, List, Optional, Union
+from pydantic.main import BaseModel
 
-__MOD_NAME__ = "demo"
+
+""" FIXME 
+    make Query and subclasses subclass of pydantic `BaseModel`    
+"""
 
 
-@app.get("/" + __MOD_NAME__ + "/")
-async def root():
-    return {"message": "Demo module is working!"}
+class Query(BaseModel):
+    service: str
+    item_key: Optional[Union[int, str]]
+
+
+class CacheQuery(Query):
+    service: str
+    item_key: Optional[Union[int, str]] = None
+
+
+class QueryResponse(BaseModel):
+    query: Query
+    results_count: Optional[int] = None
+    results: Optional[List[Any]] = None
+    error: Optional[str] = None

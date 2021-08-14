@@ -15,9 +15,10 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import sys
+from typing import List
 from defrag import LOGGER, LOAD, NO_LOAD
 
-def __list_all_modules():
+def __list_all_modules() -> List[str]:
     from os.path import dirname, basename, isfile
     import glob
 
@@ -49,6 +50,7 @@ def __list_all_modules():
         return to_load
 
     return all_modules
+
 
 ALL_MODULES = sorted(__list_all_modules())
 # TODO: Print something
