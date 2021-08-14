@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+from defrag.modules.helpers.requests import Req
 from defrag.modules.db.redis import RedisPool
 import uvicorn
 import importlib
@@ -49,13 +50,19 @@ async def register_modules_as_services() -> None:
             service.register_service()
 
 
+@app.on_event("shutdown")
+async def close_session() -> None:
+    await Req.close_session()
+
+
 @app.get("/docs", include_in_schema=False)
 def overridden_swagger():
-	return get_swagger_ui_html(openapi_url="/openapi.json", title="FastAPI", swagger_favicon_url="https://static.opensuse.org/favicon.svg")
+    return get_swagger_ui_html(openapi_url="/openapi.json", title="FastAPI", swagger_favicon_url="https://static.opensuse.org/favicon.svg")
+
 
 @app.get("/redoc", include_in_schema=False)
 def overridden_redoc():
-	return get_redoc_html(openapi_url="/openapi.json", title="FastAPI", redoc_favicon_url="https://static.opensuse.org/favicon.svg")
+    return get_redoc_html(openapi_url="/openapi.json", title="FastAPI", redoc_favicon_url="https://static.opensuse.org/favicon.svg")
 
 
 if __name__ == "__main__":

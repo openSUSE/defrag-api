@@ -44,4 +44,5 @@ class Req:
             return self.get_session().post(self.url, json=self.json)
 
     async def __aexit__(self, *args, **kwargs) -> None:
+        """ Session closing is now a task when main, upon shutting down. """
         pass
