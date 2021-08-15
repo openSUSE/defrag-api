@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from defrag.modules.tgrambot import start_bot
 from defrag.modules.db.redis import RedisPool
 import uvicorn
 import importlib
@@ -45,10 +44,12 @@ async def register_modules_as_services() -> None:
     """ Registers all modules implementing 'register_service()'. """
     with RedisPool() as conn:
         conn.flushall()
+    """
     for service in IMPORTED.values():
         if hasattr(service, "register_service"):
             service.register_service()
-
+    """
+    IMPORTED["tgrambot"].register()
 
 @app.get("/docs", include_in_schema=False)
 def overridden_swagger():
@@ -62,4 +63,4 @@ def overridden_redoc():
 
 if __name__ == "__main__":
     main()
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8080)

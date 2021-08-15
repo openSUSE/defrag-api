@@ -1,41 +1,56 @@
-import asyncio
+from aiogram.dispatcher.webhook import BaseResponse
+from defrag import app
 from defrag.modules.helpers.services_manager import ServiceTemplate, ServicesManager
-import logging
-from os import environ as env
 from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
+import asyncio
+import logging
+from os import environ as env
 
 __MOD_NAME__ = "tgrambot"
 
 logging.basicConfig(level=logging.INFO)
 
+TOKEN = env["TELEGRAM_BOT_TOKEN"]
+# about HOST: use ngrok.io to get an https endpoint to expose and forward from
+# in prodution we will need to pass our own TLS certificate to `set_webhook` below
+WEBHOOK_HOST = env["TELEGRAM_HOST"]
+WEBHOOK_PATH = env["TELEGRAM_PATH"]
+WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}{TOKEN}"
+APP_PORT = env["APP_PORT"]
+APP_HOST = env["APP_HOST"]
 
-async def master_handler(message: types.Message):
+
+bot = Bot(token=TOKEN)
+dp = Dispatcher(bot)
+
+
+@dp.message_handler()
+async def echo(message: types.Message) -> None:
     """
     This handler will be called when user sends `/start` or `/help` command
     """
-    await message.reply("Hi!\nI'm EchoBot!\nPowered by aiogram.")
+    await bot.send_message(chat_id=message.chat.id, text="Hi!\nI'm EchoBot!\nPowered by aiogram.")
 
 
-async def echo(message: types.Message):
-    await message.answer(message.text)
+@app.post(WEBHOOK_PATH + TOKEN)
+async def bot_endpoint(data: dict):
+    res = await dp.process_update(types.Update(**data))
+    if isinstance(res, BaseResponse):
+        return res.get_response()
+    print("Not an instance of BaseResponse.")
 
 
-async def sendToChannel(bot: Bot):
-    await bot.send_message("@pubchess", "Test")
-
-
-def start_bot():
-    bot = Bot(token=env["TELEGRAM_BOT_TOKEN"])
-    dp = Dispatcher(bot)
+def start_bot(webhook: bool) -> None:
     dp.middleware.setup(LoggingMiddleware())
-    dp.register_message_handler(master_handler, commands=['start', 'welcome'])
-    dp.register_message_handler(echo, content_types=types.Message)
-    asyncio.create_task(dp.start_polling())
+    if webhook:
+        asyncio.create_task(bot.set_webhook(url=WEBHOOK_URL))
+    else:
+        asyncio.create_task(dp.start_polling())
 
 
-def register():
+def register() -> None:
     template = ServiceTemplate(__MOD_NAME__, None, None, None, None, None)
     service = ServicesManager.realize_service_template(template, None)
     ServicesManager.register_service(__MOD_NAME__, service)
-    start_bot()
+    start_bot(webhook=True)
