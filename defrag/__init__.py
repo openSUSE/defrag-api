@@ -42,6 +42,10 @@ if ENV:
     BUGZILLA_USER = os.environ.get("BUGZILLA_USER", None)
     BUGZILLA_PASSWORD = os.environ.get("BUGZILLA_PASSWORD", None)
     NO_LOAD = os.environ.get("NO_LOAD", "").split()
+    TWITTER_CONSUMER_KEY = os.environ.get("TWITTER_CONSUMER_KEY", None)
+    TWITTER_CONSUMER_SECRET = os.environ.get("TWITTER_CONSUMER_SECRET", None)
+    TWITTER_ACCESS_TOKEN = os.environ.get("TWITTER_ACCESS_TOKEN", None)
+    TWITTER_ACCESS_TOKEN_SECRET = os.environ.get("TWITTER_ACCESS_TOKEN_SECRET", None)
 else:
     from defrag.config import Config
     REDIS_HOST = Config.REDIS_HOST
@@ -50,6 +54,10 @@ else:
     BUGZILLA_USER = Config.BUGZILLA_USER
     BUGZILLA_PASSWORD = Config.BUGZILLA_PASSWORD
     NO_LOAD = Config.NO_LOAD
+    TWITTER_CONSUMER_KEY = Config.TWITTER_CONSUMER_KEY
+    TWITTER_CONSUMER_SECRET = Config.TWITTER_CONSUMER_SECRET
+    TWITTER_ACCESS_TOKEN = Config.TWITTER_ACCESS_TOKEN
+    TWITTER_ACCESS_TOKEN_SECRET = Config.TWITTER_ACCESS_TOKEN_SECRET
 
 # Initialize app
 app = FastAPI(docs_url=None, redoc_url=None)
