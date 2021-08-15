@@ -23,13 +23,13 @@ class Req:
     async def close_session(cls) -> None:
         if cls.session and not cls.session.closed:
             await cls.session.close()
+            cls.session = None
 
     def __init__(self, url: str, verb: Optional[str] = "GET", json: Optional[Dict[AnyStr, AnyStr]] = None, closeOnResponse: Optional[bool] = True) -> None:
         if json:
             self.json = json
         self.verb = verb
         self.url = url
-        self.closeOnResponse = closeOnResponse
 
     async def __aenter__(self) -> Any:
         if not self.verb in self.implemented_verbs:
@@ -44,5 +44,5 @@ class Req:
             return self.get_session().post(self.url, json=self.json)
 
     async def __aexit__(self, *args, **kwargs) -> None:
-        if self.closeOnResponse:
-            await self.close_session()
+        """ Session closing is now a task when main, upon shutting down. """
+        pass
