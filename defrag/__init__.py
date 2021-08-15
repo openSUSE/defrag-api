@@ -16,6 +16,7 @@
 
 import logging
 from fastapi import FastAPI
+import os
 
 LOGGER = logging.getLogger(__name__)
 # TODO: Change the logformat so that it fits uvicorn
@@ -30,9 +31,25 @@ else:
         format=LOGFORMAT,
         level=logging.INFO)
 
-NO_LOAD = []
 LOAD = []
 
+ENV = bool(os.environ.get('ENV', False))
+
+if ENV:
+    REDIS_HOST = os.environ.get("REDIS_HOST", None)
+    REDIS_PORT = int(os.environ.get("REDIS_PORT", None))
+    REDIS_PWD = os.environ.get("REDIS_PWD", None)
+    BUGZILLA_USER = os.environ.get("BUGZILLA_USER", None)
+    BUGZILLA_PASSWORD = os.environ.get("BUGZILLA_PASSWORD", None)
+    NO_LOAD = os.environ.get("NO_LOAD", "").split()
+else:
+    from defrag.config import Config
+    REDIS_HOST = Config.REDIS_HOST
+    REDIS_PORT = Config.REDIS_PORT
+    REDIS_PWD = Config.REDIS_PWD
+    BUGZILLA_USER = Config.BUGZILLA_USER
+    BUGZILLA_PASSWORD = Config.BUGZILLA_PASSWORD
+    NO_LOAD = Config.NO_LOAD
 
 # Initialize app
 app = FastAPI(docs_url=None, redoc_url=None)
