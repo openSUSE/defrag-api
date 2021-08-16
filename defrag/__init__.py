@@ -16,6 +16,8 @@
 
 import logging
 from fastapi import FastAPI
+from pathlib import Path
+
 import os
 
 LOGGER = logging.getLogger(__name__)
@@ -33,9 +35,10 @@ else:
 
 LOAD = []
 
-ENV = bool(os.environ.get('ENV', False))
+user_env = Path(".env")
+has_env = user_env.is_file() or bool(os.environ.get('ENV', False))
 
-if ENV:
+if has_env:
     REDIS_HOST = os.environ.get("REDIS_HOST", None)
     REDIS_PORT = int(os.environ.get("REDIS_PORT", None))
     REDIS_PWD = os.environ.get("REDIS_PWD", None)
@@ -45,7 +48,8 @@ if ENV:
     TWITTER_CONSUMER_KEY = os.environ.get("TWITTER_CONSUMER_KEY", None)
     TWITTER_CONSUMER_SECRET = os.environ.get("TWITTER_CONSUMER_SECRET", None)
     TWITTER_ACCESS_TOKEN = os.environ.get("TWITTER_ACCESS_TOKEN", None)
-    TWITTER_ACCESS_TOKEN_SECRET = os.environ.get("TWITTER_ACCESS_TOKEN_SECRET", None)
+    TWITTER_ACCESS_TOKEN_SECRET = os.environ.get(
+        "TWITTER_ACCESS_TOKEN_SECRET", None)
 else:
     from defrag.config import Config
     REDIS_HOST = Config.REDIS_HOST
@@ -61,5 +65,3 @@ else:
 
 # Initialize app
 app = FastAPI(docs_url=None, redoc_url=None)
-
-
