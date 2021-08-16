@@ -18,3 +18,9 @@ class Config:
 
     # Module configuration
     NO_LOAD = [] # List of modules that should not be loaded
+
+    # Twitter Config
+    TWITTER_CONSUMER_KEY = ""
+    TWITTER_CONSUMER_SECRET = ""
+    TWITTER_ACCESS_TOKEN = ""
+    TWITTER_ACCESS_TOKEN_SECRET = ""
