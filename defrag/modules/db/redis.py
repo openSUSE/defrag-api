@@ -2,6 +2,7 @@ from os import environ as env
 from typing import Optional, Union
 from redis import Redis, BlockingConnectionPool
 from redis.client import Pipeline
+from defrag import REDIS_HOST, REDIS_PORT, REDIS_PWD, LOGGER
 
 """ 
 Using `BlockingConnectionPool` instead of the default
@@ -22,11 +23,11 @@ class RedisPool:
     @classmethod
     def open(cls) -> None:
         if not cls.pool:
-            print("Opening pool...")
+            LOGGER.debug("Opening pool...")
             cls.pool = BlockingConnectionPool(
-                host=env["REDIS_HOST"],
-                port=env["REDIS_PORT"],
-                password=env["REDIS_PWD"],
+                host=REDIS_HOST,
+                port=REDIS_PORT,
+                password=REDIS_PWD,
             )
 
     @classmethod
@@ -39,7 +40,7 @@ class RedisPool:
     def drain(cls) -> None:
         """ Closes all connections with clients immediately. """
         if cls.pool:
-            print("Draining pool...")
+            LOGGER.debug("Draining pool...")
             cls.pool.disconnect()
             cls.pool = None
 

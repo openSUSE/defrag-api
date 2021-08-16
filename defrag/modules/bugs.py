@@ -1,13 +1,12 @@
 import asyncio
 from functools import partial
-import logging
 from bugzilla.base import Bugzilla
 from pydantic.main import BaseModel
 from defrag.modules.helpers import Query, CacheQuery, QueryResponse
 from defrag.modules.helpers.services_manager import Run, ServiceTemplate, ServicesManager
 from defrag.modules.helpers.cache_stores import CacheStrategy, DStore, RedisCacheStrategy
 from typing import Any, List, Optional
-from defrag import app
+from defrag import app, BUGZILLA_USER, BUGZILLA_PASSWORD
 from defrag.modules.helpers.sync_utils import as_async
 from defrag.modules.helpers.exceptions import ParsingException
 from defrag.modules.helpers.requests import Req
@@ -46,7 +45,7 @@ class BugzillaQueryEntry(BaseModel):
 def login() -> Bugzilla:
     global bzapi
     handler = bugzilla.Bugzilla(
-        url=URL, user=env["BUGZILLA_USER"], password=env["BUGZILLA_PASSWORD"])
+        url=URL, user=BUGZILLA_USER, password=BUGZILLA_PASSWORD)
     if not handler.logged_in:
         raise Exception(
             "Login failed. Please double-check the credentials provided by your environment.")

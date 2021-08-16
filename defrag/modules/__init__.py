@@ -53,5 +53,5 @@ def __list_all_modules() -> List[str]:
 
 
 ALL_MODULES = sorted(__list_all_modules())
-# TODO: Print something
+LOGGER.info("Modules to load: %s", str(ALL_MODULES))
 __all__ = ALL_MODULES + ["ALL_MODULES"]
