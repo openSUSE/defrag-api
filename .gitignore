@@ -3,4 +3,5 @@
 Pipfile.lock
 Pipfile
 defrag/config.py
+config.ini
 defrag/profiling/stats
