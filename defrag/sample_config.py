@@ -1,9 +1,3 @@
-if __name__.endswith("sample_config"):
-    import sys
-    print("The README is there to be read. Extend this sample config to a config file "
-        "and rename it to 'config.py'. Quiting.", file=sys.stderr)
-    sys.exit(1)
-
 # Configuration file for defrag.
 
 class Config:    
