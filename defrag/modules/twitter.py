@@ -1,6 +1,6 @@
 from defrag.modules.helpers import Query
 from collections import namedtuple
-from defrag import app
+from defrag import app, TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET
 from defrag.modules.helpers.cache_stores import CacheStrategy, QStore, RedisCacheStrategy
 from defrag.modules.helpers.data_manipulation import compose
 from defrag.modules.helpers.sync_utils import as_async
@@ -35,8 +35,8 @@ class TwitterStore(QStore):
             return [entry(x.text, x.created_at, x.id_str) for x in xs]
         sort_make = compose(_sort, _make)
         try:
-            api = twitter.Api(consumer_key=env["TWITTER_CONSUMER_KEY"], consumer_secret=env["TWITTER_CONSUMER_SECRET"],
-                              access_token_key=env["TWITTER_ACCESS_TOKEN"], access_token_secret=env["TWITTER_ACCESS_TOKEN_SECRET"])
+            api = twitter.Api(consumer_key=TWITTER_CONSUMER_KEY, consumer_secret=TWITTER_CONSUMER_SECRET,
+                              access_token_key=TWITTER_ACCESS_TOKEN, access_token_secret=TWITTER_ACCESS_TOKEN_SECRET)
 
             fetch = as_async(api.GetUserTimeline)
             entries: List[Any] = await fetch(screen_name="@openSUSE")
