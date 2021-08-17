@@ -5,7 +5,7 @@ from pydantic.main import BaseModel
 from defrag.modules.helpers import Query, CacheQuery, QueryResponse
 from defrag.modules.helpers.services_manager import Run, ServiceTemplate, ServicesManager
 from defrag.modules.helpers.cache_stores import CacheStrategy, DStore, RedisCacheStrategy
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from defrag import app, BUGZILLA_USER, BUGZILLA_PASSWORD
 from defrag.modules.helpers.sync_utils import as_async
 from defrag.modules.helpers.exceptions import ParsingException
@@ -93,7 +93,7 @@ async def search_bugs_with_term(term: str) -> List[int]:
         raise exp
 
 
-async def search_all_bugs(query: BugzillaQueryEntry):
+async def search_all_bugs(query: BugzillaQueryEntry) -> List[Dict[str, Any]]:
     if not query.search_string:
         return []
     bugs_ids = await search_bugs_with_term(query.search_string)
@@ -128,8 +128,11 @@ class BugzillaStore(DStore):
         # cache only on cache misses.
         pass
 
-    def filter_fresh_items(self, fetch_items: List[Any]):
+    def filter_fresh_items(self, fetch_items: Union[BugzillaQueryEntry,List[Dict[str,Any]]]) -> List[Dict[str,Any]]:
         # Filters out bugs whose id is not already a key in the cache dict.
+        if isinstance (fetch_items, BugzillaQueryEntry):
+            bug_as_dict = fetch_items.dict()
+            return [bug_as_dict] if not bug_as_dict[self.dict_key] in self.container else []
         return [i for i in fetch_items if not i[self.dict_key] in self.container]
 
 
