@@ -183,7 +183,7 @@ class Run:
             if not ServicesManager.services:
                 raise Exception(
                     "Cache cannot be traversed before Services are initialized")
-            if items_from_cache := ServicesManager.services[self.query.service].cache_store.search_items():
+            if items_from_cache := await ServicesManager.services[self.query.service].cache_store.search_items():
                 return items_from_cache
             if fetched_items := await self.runner():
                 self.refreshed_items = fetched_items
@@ -206,4 +206,6 @@ class Run:
             raise QueryException(
                 "Services need to be initialized before running a query.")
         async with Run.Cache(query, fallback) as results:
+            if not isinstance(results, List):
+                results = [results]
             return QueryResponse(query=query, results=results, results_count=len(results))
