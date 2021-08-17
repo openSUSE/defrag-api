@@ -1,7 +1,5 @@
-from defrag.modules.helpers.exceptions import NetworkException
 from typing import Any, AnyStr, Dict, Optional
 from aiohttp import ClientSession
-import aiohttp
 
 
 class Req:
@@ -25,9 +23,9 @@ class Req:
             await cls.session.close()
             cls.session = None
 
-    def __init__(self, url: str, verb: Optional[str] = "GET", json: Optional[Dict[AnyStr, AnyStr]] = None, closeOnResponse: Optional[bool] = True) -> None:
-        if json:
-            self.json = json
+    def __init__(self, url: str, params: Optional[Dict[str, Any]] = None, verb: Optional[str] = "GET", json: Optional[Dict[AnyStr, AnyStr]] = None, closeOnResponse: Optional[bool] = True) -> None:
+        self.json = json
+        self.params = params
         self.verb = verb
         self.url = url
 
@@ -36,7 +34,7 @@ class Req:
             raise self.ReqException(
                 f"This verb is not implemented {self.verb}")
         if self.verb == "GET":
-            return await self.get_session().get(self.url)
+            return await self.get_session().get(self.url, params=self.params)
         if self.verb == "POST":
             if not self.json:
                 raise self.ReqException(

@@ -1,12 +1,13 @@
-from defrag import app
-from defrag.modules.helpers import Query
+from datetime import datetime
+from pydantic.main import BaseModel
+from defrag import LOGGER, app
+from defrag.modules.helpers import CacheQuery, Query, QueryResponse
 from defrag.modules.helpers.requests import Req
 from defrag.modules.helpers.cache_stores import CacheStrategy, QStore, RedisCacheStrategy
-from defrag.modules.helpers.data_manipulation import compose
 from defrag.modules.helpers.services_manager import Run, ServiceTemplate, ServicesManager
 import atoma
-from typing import Any, Callable, List, NamedTuple, Optional, Tuple
-from collections import namedtuple
+from typing import Any, Dict, List
+from operator import attrgetter
 
 """ INFO
 This module provides a class to query & store recent reddit posts (sent to "r/openSUSE"). 
@@ -19,40 +20,47 @@ to model data answering the question: "What are people talking about recently?"
 __MOD_NAME__ = "reddit"
 
 
+class RedditEntry(BaseModel):
+    title: str
+    url: str
+    updated: float
+
+
 class RedditStore(QStore):
     """
     Specialization of QStore to handle specifically data by this service / module.
     """
 
     @staticmethod
-    async def fetch_items() -> Optional[List[NamedTuple]]:
+    async def fetch_items() -> List[RedditEntry]:
         """ Tries to fetch 25 most recent posts from r/openSUSE and extract title, url
         and update time in memory """
-        def _sort(xs: List[Tuple]) -> List[Tuple]:
-            return sorted(xs, key=lambda x: x[2])
-
-        def _make(xs: List[Tuple]) -> List[NamedTuple]:
-            entry = namedtuple("RedditPost", ["title", "url", "updated"])
-            return list(map(lambda x: entry(x[0], x[1], str(x[2])), xs))
-
-        sort_make: Callable[[List[Any]], List[Any]] = compose(_sort, _make)
-
         async with Req("https://www.reddit.com/r/openSUSE/.rss") as response:
             try:
                 if reddit_bytes := await response.read():
                     feed = atoma.parse_atom_bytes(reddit_bytes)
-                    entries: List[Tuple] = [
-                        (e.title.value, e.links[0].href, e.updated) for e in feed.entries]
-                    return sort_make(entries)
+                    entries: List[RedditEntry] = [RedditEntry(
+                        title=e.title.value, url=e.links[0].href, updated=datetime.timestamp(e.updated)) for e in feed.entries]
+                    return sorted(entries, key=attrgetter("updated"))
                 else:
                     raise Exception("Empty results from r/openSUSE")
             except Exception as err:
-                print("Unable to fetch r/openSUSE: ", err)
+                LOGGER.warn("Unable to fetch r/openSUSE: ", err)
+                return []
 
-    def filter_fresh_items(self, items: List[NamedTuple]) -> List[NamedTuple]:
+    def filter_fresh_items(self, items: List[RedditEntry]) -> List[Dict[str, Any]]:
         if not items or not self.container:
-            return items
-        return [i for i in items if getattr(i, "updated") > self.when_last_update]
+            return [i.dict() for i in items]
+        return [i.dict() for i in items if getattr(i, "updated") > self.when_last_update]
+
+
+async def search_reddit(keywords: str) -> List[RedditEntry]:
+
+    async with Req(f"https://www.reddit.com/r/openSUSE/search.rss", params={"q": keywords, "sort": "relevance", "restrict_sr": 1, "type": "link", "limit": 75}) as response:
+        if reddit_bytes := await response.read():
+            feed = atoma.parse_atom_bytes(reddit_bytes)
+            return [RedditEntry(title=e.title.value, url=e.links[0].href, updated=datetime.timestamp(e.updated)) for e in feed.entries]
+        return []
 
 
 def register_service():
@@ -73,6 +81,14 @@ def register_service():
     ServicesManager.register_service(name, service)
 
 
-@app.get("/reddit")
-async def get_reddit():
-    return await Run.query(Query(service="reddit"))
+@app.get("/" + __MOD_NAME__ + "/search/")
+async def search(keywords: str) -> QueryResponse:
+    results = await search_reddit(keywords)
+    query = Query(service=__MOD_NAME__)
+    return QueryResponse(query=query, results=results, results_count=len(results))
+
+
+@app.get(f"/{__MOD_NAME__}/")
+async def get_reddit() -> QueryResponse:
+    query = CacheQuery(service="reddit", item_key=None)
+    return await Run.query(query, None)
