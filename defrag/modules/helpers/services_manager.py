@@ -207,5 +207,5 @@ class Run:
                 "Services need to be initialized before running a query.")
         async with Run.Cache(query, fallback) as results:
             if not isinstance(results, List):
-                results = list(results)
+                results = [results]
             return QueryResponse(query=query, results=results, results_count=len(results))
