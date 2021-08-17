@@ -17,8 +17,10 @@
 import logging
 from fastapi import FastAPI
 from pathlib import Path
-
+import configparser
 import os
+import json
+
 
 LOGGER = logging.getLogger(__name__)
 # TODO: Change the logformat so that it fits uvicorn
@@ -51,17 +53,18 @@ if has_env:
     TWITTER_ACCESS_TOKEN_SECRET = os.environ.get(
         "TWITTER_ACCESS_TOKEN_SECRET", None)
 else:
-    from defrag.config import Config
-    REDIS_HOST = Config.REDIS_HOST
-    REDIS_PORT = Config.REDIS_PORT
-    REDIS_PWD = Config.REDIS_PWD
-    BUGZILLA_USER = Config.BUGZILLA_USER
-    BUGZILLA_PASSWORD = Config.BUGZILLA_PASSWORD
-    NO_LOAD = Config.NO_LOAD
-    TWITTER_CONSUMER_KEY = Config.TWITTER_CONSUMER_KEY
-    TWITTER_CONSUMER_SECRET = Config.TWITTER_CONSUMER_SECRET
-    TWITTER_ACCESS_TOKEN = Config.TWITTER_ACCESS_TOKEN
-    TWITTER_ACCESS_TOKEN_SECRET = Config.TWITTER_ACCESS_TOKEN_SECRET
+    config = configparser.ConfigParser()
+    config.read("config.ini")
+    REDIS_HOST = config["REDIS"]["REDIS_HOST"] 
+    REDIS_PORT = int(config["REDIS"]["REDIS_PORT"])
+    REDIS_PWD = config["REDIS"]["REDIS_PWD"]
+    BUGZILLA_USER = config["BUGZILLA"]["BUGZILLA_USER"]
+    BUGZILLA_PASSWORD = config["BUGZILLA"]["BUGZILLA_PASSWORD"]
+    NO_LOAD = json.loads(config["MODULES"]["NO_LOAD"])
+    TWITTER_CONSUMER_KEY = config["TWITTER"]["TWITTER_CONSUMER_KEY"]
+    TWITTER_CONSUMER_SECRET = config["TWITTER"]["TWITTER_CONSUMER_SECRET"]
+    TWITTER_ACCESS_TOKEN = config["TWITTER"]["TWITTER_ACCESS_TOKEN"]
+    TWITTER_ACCESS_TOKEN_SECRET = config["TWITTER"]["TWITTER_ACCESS_TOKEN_SECRET"]
 
 # Initialize app
 app = FastAPI(docs_url=None, redoc_url=None)
