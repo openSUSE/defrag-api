@@ -56,10 +56,7 @@ TWITTER_ACCESS_TOKEN_SECRET =
 ```
 
 ## Env based configuration
-If you want to use environemt based configuration, you have two options:
-1. Set all the variables by hand
-2. Create a `.env` file in the root of the project (suggested)
-
+If you want to use environemt based configuration, create a `.env` file in the root of the project and fill in the values.
 Setting the variables is pretty simple, it's just a `key=value` principle.
 However, the `NO_LOAD` variable is special, as it is a list. So, if you want to block multiple
 modules from loading, seperate them by spaces:
