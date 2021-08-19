@@ -1,57 +1,68 @@
-from defrag.modules.helpers import Query
-from collections import namedtuple
-from defrag import app, TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET
+from datetime import datetime
+from pydantic.main import BaseModel
+from defrag.modules.helpers import CacheQuery, Query, QueryResponse
+from defrag import LOGGER, app, TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET
 from defrag.modules.helpers.cache_stores import CacheStrategy, QStore, RedisCacheStrategy
-from defrag.modules.helpers.data_manipulation import compose
 from defrag.modules.helpers.sync_utils import as_async
 from defrag.modules.helpers.services_manager import Run, ServiceTemplate, ServicesManager
 import twitter
-from typing import Any, List, NamedTuple, Optional
-from os import environ as env
+from typing import Any, Dict, List
 from operator import attrgetter
 
 """ INFO
 This module provides a class to
-serve as querying & storing point for recent tweets (sent by user "@openSUSE"). 
+serve as querying & storing point for recent tweets (sent by user "@openSUSE").
 Additional features could be:
 - posting (would require higher credentials)
-- fetching also Tweets *about* openSUSE 
+- fetching also Tweets *about* openSUSE
 to model data answering the question: "What are people talking about recently?"
 """
 
 __MOD_NAME__ = "twitter"
 
 
+api = twitter.Api(consumer_key=TWITTER_CONSUMER_KEY, consumer_secret=TWITTER_CONSUMER_SECRET,
+                  access_token_key=TWITTER_ACCESS_TOKEN, access_token_secret=TWITTER_ACCESS_TOKEN_SECRET)
+
+
+class TwitterEntry(BaseModel):
+    contents: str
+    created_at: str
+    created_at_in_seconds: float
+    id_str: str
+
+
 class TwitterStore(QStore):
 
     @staticmethod
-    async def fetch_items() -> Optional[List[NamedTuple]]:
-        def _sort(xs: List[Any]) -> List[Any]:
-            return sorted(xs, key=attrgetter("created_at"))
-
-        def _make(xs: List[Any]) -> List[NamedTuple]:
-            entry = namedtuple(
-                "TwitterEntry", ["text", "created_at", "id_str"])
-            return [entry(x.text, x.created_at, x.id_str) for x in xs]
-        sort_make = compose(_sort, _make)
+    async def fetch_items() -> List[TwitterEntry]:
         try:
-            api = twitter.Api(consumer_key=TWITTER_CONSUMER_KEY, consumer_secret=TWITTER_CONSUMER_SECRET,
-                              access_token_key=TWITTER_ACCESS_TOKEN, access_token_secret=TWITTER_ACCESS_TOKEN_SECRET)
-
             fetch = as_async(api.GetUserTimeline)
-            entries: List[Any] = await fetch(screen_name="@openSUSE")
-            return sort_make(entries)
+            entries = [TwitterEntry(contents=x.text, created_at_in_seconds=x.created_at_in_seconds, created_at=x.created_at, id_str=x.id_str) for x in await fetch(screen_name="@openSUSE")]
+            return sorted(entries, key=attrgetter("created_at"))
         except Exception as err:
-            print("Unable to fetch from Twitter @openSUSE: ", err)
+            LOGGER.warning("Unable to fetch from Twitter @openSUSE: ", err)
+            return []
 
-    def filter_fresh_items(self, items: List[NamedTuple]) -> List[NamedTuple]:
-        if not items or not self.container:
-            return items
-        return [i for i in items if getattr(i, "created_at_in_seconds") > self.when_last_update]
+    def filter_fresh_items(self, items: List[TwitterEntry]) -> List[Dict[str, Any]]:
+        if not items or not self.container or not self.when_last_update:
+            return [i.dict() for i in items]
+        return [i.dict() for i in items if getattr(i, "created_at_in_seconds") > datetime.timestamp(self.when_last_update)]
+
+
+async def search_tweets(keywords: str) -> List[TwitterEntry]:
+    try:
+        search = as_async(api.GetSearch)
+        raw_query = f"q=openSUSE {keywords}&result_type=recent&count=100"
+        results = await search(raw_query=raw_query)
+        return [TwitterEntry(contents=x.text, created_at_in_seconds=x.created_at_in_seconds, created_at=x.created_at, id_str=x.id_str) for x in results]
+    except Exception as err:
+        LOGGER.warning("Unable to fetch from Twitter @opensuse: ", err)
+        return []
 
 
 def register_service():
-    """ 
+    """
     The idea is that modules are registered against the
     service manager by calling this function. Can be called from @app.on_event('statupp'
     for example, or from somewhere else in __main__, or from TwitterStore. To be discussed,
@@ -68,6 +79,13 @@ def register_service():
     ServicesManager.register_service(name, service)
 
 
-@app.get("/twitter")
-async def get_twitter():
-    return await Run.query(Query(service="twitter"))
+@app.get(f"/{__MOD_NAME__}/")
+async def get_twitter() -> QueryResponse:
+    return await Run.query(CacheQuery(service="twitter", item_key="id_str"))
+
+
+@app.get(f"/{__MOD_NAME__}/search/")
+async def search_twitter(keywords: str) -> QueryResponse:
+    results = await search_tweets(keywords)
+    query = Query(service=__MOD_NAME__)
+    return QueryResponse(query=query, results=results, results_count=len(results))

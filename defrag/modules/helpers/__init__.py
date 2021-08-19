@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from typing import Dict, Any, List, Optional, Union
+from typing import Any, List, Optional, Union
 from pydantic.main import BaseModel
 
 

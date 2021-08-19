@@ -195,8 +195,6 @@ class Run:
             if self.refreshed_items:
                 await self.cache.update_on_filtered_fresh(
                     self.refreshed_items)
-                LOGGER.info("Cache: Ouch, cache miss on",
-                            str(self.query))
 
     @staticmethod
     async def query(query: CacheQuery, fallback: Optional[partial] = None) -> QueryResponse:
