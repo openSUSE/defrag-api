@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from typing import Any, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from pydantic.main import BaseModel
 
 
@@ -36,5 +36,5 @@ class CacheQuery(Query):
 class QueryResponse(BaseModel):
     query: Query
     results_count: Optional[int] = None
-    results: Optional[List[Any]] = None
+    results: Optional[Union[List[Any], Dict[str,Any]]] = None
     error: Optional[str] = None
