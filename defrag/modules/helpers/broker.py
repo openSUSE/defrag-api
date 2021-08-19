@@ -114,6 +114,7 @@ class MessagesBroker:
         """
         if message["message_id"] in cls.unscheduled_messages_ids:
             cls.unscheduled_messages_ids.remove(message["message_id"])
+            return
         if message in cls.scheduled:
             cls.scheduled.remove(message)
         response = await cls.send(message)
