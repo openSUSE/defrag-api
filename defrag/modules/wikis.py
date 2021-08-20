@@ -27,7 +27,7 @@ def title_to_url(title: str, base_url="https://en.opensuse.org/") -> str:
 
 
 async def search_wikis_as_list(keywords: str) -> List[WikiListEntry]:
-    async with Req(f"https://en.opensuse.org/api.php", params={"action": "query", "list": "search", "srwhat": "text", "srsearch": keywords, "srlimit": 50, "format": "json"}) as response:
+    async with Req(f"https://en.opensuse.org/api.php", params={"action": "query", "list": "search", "srwhat": "text", "srsearch": keywords, "srnamespace": "0|2|4|6|10|12|14|100|102|104|106", "srlimit": 50, "format": "json"}) as response:
         if results_json := await response.json():
             return [WikiListEntry(url=title_to_url(i["title"]), wordcount=i["wordcount"], timestamp=parser.isoparse(i["timestamp"]).timestamp(), title=i["title"], snippet=i["snippet"]) for i in results_json["query"]["search"]]
         return []
