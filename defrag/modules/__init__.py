@@ -16,7 +16,7 @@
 
 import sys
 from typing import List
-from defrag import LOGGER, LOAD, NO_LOAD
+from defrag import LOGGER, LOAD
 
 def __list_all_modules() -> List[str]:
     from os.path import dirname, basename, isfile
@@ -30,7 +30,7 @@ def __list_all_modules() -> List[str]:
         if isfile(f) and f.endswith(".py") and not f.endswith("__init__.py")
     ]
 
-    if LOAD or NO_LOAD:
+    if LOAD:
         to_load = LOAD
         if to_load:
             if not all(
@@ -42,10 +42,6 @@ def __list_all_modules() -> List[str]:
 
         else:
             to_load = all_modules
-
-        if NO_LOAD:
-            LOGGER.info("Not loading: {}".format(NO_LOAD))
-            return [item for item in to_load if item not in NO_LOAD]
 
         return to_load
 
