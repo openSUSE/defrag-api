@@ -30,8 +30,8 @@ _Cross-platform (Matrix, Telegram) moderation_ (depends on: https://github.com/o
     - [x] Reddit
     - [x] Twitter
 - - [ ] search forum posts
-- - [ ] search wiki
-- [...] search bugs on bugzilla
+- - [x] search wiki
+- - [x] search bugs on bugzilla
 - - [x] search openSUSE documentation
 - - [ ] search Factory + Pre-Factory packages with zypper + opi
 - - [ ] search for Progress / Pagure
