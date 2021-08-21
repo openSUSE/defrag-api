@@ -19,7 +19,6 @@ from fastapi import FastAPI
 from pathlib import Path
 import configparser
 import os
-import json
 
 
 LOGGER = logging.getLogger(__name__)
@@ -46,7 +45,6 @@ if has_env:
     REDIS_PWD = os.environ.get("REDIS_PWD", None)
     BUGZILLA_USER = os.environ.get("BUGZILLA_USER", None)
     BUGZILLA_PASSWORD = os.environ.get("BUGZILLA_PASSWORD", None)
-    NO_LOAD = os.environ.get("NO_LOAD", "").split()
     TWITTER_CONSUMER_KEY = os.environ.get("TWITTER_CONSUMER_KEY", None)
     TWITTER_CONSUMER_SECRET = os.environ.get("TWITTER_CONSUMER_SECRET", None)
     TWITTER_ACCESS_TOKEN = os.environ.get("TWITTER_ACCESS_TOKEN", None)
@@ -60,7 +58,6 @@ else:
     REDIS_PWD = config["REDIS"]["REDIS_PWD"]
     BUGZILLA_USER = config["BUGZILLA"]["BUGZILLA_USER"]
     BUGZILLA_PASSWORD = config["BUGZILLA"]["BUGZILLA_PASSWORD"]
-    NO_LOAD = json.loads(config["MODULES"]["NO_LOAD"])
     TWITTER_CONSUMER_KEY = config["TWITTER"]["TWITTER_CONSUMER_KEY"]
     TWITTER_CONSUMER_SECRET = config["TWITTER"]["TWITTER_CONSUMER_SECRET"]
     TWITTER_ACCESS_TOKEN = config["TWITTER"]["TWITTER_ACCESS_TOKEN"]

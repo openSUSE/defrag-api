@@ -12,7 +12,6 @@ Both the configuration file and the environment variables share the same keys, l
 |REDIS_PWD	|String	|Password for the Redis server, blank if none	|no	|
 |BUGZILLA_USER	|String	|Your openSUSE infrastructure username|yes	|
 |BUGZILLA_PASSWORD	|String	|Your openSUSE infrastructure password	|yes|
-|NO_LOAD	|String	|List of modules that should not be loaded. See below for details.	|yes, but can be empty|
 |TWITTER_CONSUMER_KEY	|String				||yes	|
 |TWITTER_CONSUMER_SECRET|String				||yes	|
 |TWITTER_ACCESS_TOKEN	|String 			||yes	|
@@ -42,11 +41,6 @@ BUGZILLA_USER = username
 # Your openSUSE infrastructure password
 BUGZILLA_PASSWORD = password
 
-[MODULES]
-# List of modules that should not be loaded
-# e.g. NO_LOAD = ["bugs", "twitter"]
-NO_LOAD = []
-
 [TWITTER]
 # Obtain from Twitter developer portal
 TWITTER_CONSUMER_KEY =
@@ -58,6 +52,3 @@ TWITTER_ACCESS_TOKEN_SECRET =
 ## Env based configuration
 If you want to use environemt based configuration, create a `.env` file in the root of the project and fill in the values.
 Setting the variables is pretty simple, it's just a `key=value` principle.
-However, the `NO_LOAD` variable is special, as it is a list. So, if you want to block multiple
-modules from loading, seperate them by spaces:
-`NO_LOAD="bugs reddit"`.
