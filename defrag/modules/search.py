@@ -19,8 +19,9 @@ class SearchQuery(BaseModel):
 
 
 @app.get(f"/{__MOD_NAME__}/")
-async def global_search(sq: SearchQuery) -> QueryResponse:
+async def global_search(keywords: str, scope_str: str) -> QueryResponse:
     query = Query(service=__MOD_NAME__)
+    sq = SearchQuery(keywords=keywords, scope=scope_str.split(","))
     if missing_services := [s for s in sq.scope if not s in ServicesManager.services.list_enabled()]:
         error = f"You are trying to search from services that have not been enabled yet: {missing_services}"
         return QueryResponse(query=query, error=error)
