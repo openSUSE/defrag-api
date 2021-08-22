@@ -2,7 +2,7 @@
 
 class Config:    
     # Redis configuration
-    REDIS_HOST = localhost # Host the Redis server runs at
+    REDIS_HOST = "localhost" # Host the Redis server runs at
     REDIS_PORT = 16052 # Port for the Redis server
     REDIS_PWD = "password" # Password for the Redis server, blank if none
 
