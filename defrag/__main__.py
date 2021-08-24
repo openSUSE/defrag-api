@@ -23,6 +23,28 @@ from defrag.modules import ALL_MODULES
 
 IMPORTED = {}
 
+<<<<<<< HEAD
+=======
+
+def main():
+    for module_name in ALL_MODULES:
+        imported_module = importlib.import_module(
+            "defrag.modules." + module_name)
+        if not hasattr(imported_module, "__mod_name__"):
+            imported_module.__mod_name__ = imported_module.__name__
+        LOGGER.debug("Loaded Module {}".format(imported_module.__mod_name__))
+        if not imported_module.__mod_name__.lower() in IMPORTED:
+            IMPORTED[imported_module.__mod_name__.lower()] = imported_module
+        else:
+            # NO_TWO_MODULES
+            raise Exception(
+                "Can't have two modules with the same name! Please change one")
+
+
+@app.get("/")
+async def root():
+    return {"message": "Hello World"}
+>>>>>>> ec2bf616fed091c17a6e8b1c3c91b089e038ffe2
 
 def main() -> None:
     for module_name in ALL_MODULES:
@@ -48,6 +70,7 @@ async def register_modules_as_services() -> None:
         if hasattr(service, "register_service"):
             service.register_service()
 
+<<<<<<< HEAD
 
 @app.get("/docs", include_in_schema=False)
 def overridden_swagger():
@@ -58,6 +81,8 @@ def overridden_redoc():
 	return get_redoc_html(openapi_url="/openapi.json", title="FastAPI", redoc_favicon_url="https://static.opensuse.org/favicon.svg")
 
 
+=======
+>>>>>>> ec2bf616fed091c17a6e8b1c3c91b089e038ffe2
 if __name__ == "__main__":
     main()
     uvicorn.run(app, host="0.0.0.0", port=8000)
