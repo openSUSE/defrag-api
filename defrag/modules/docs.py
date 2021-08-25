@@ -152,7 +152,7 @@ async def search(keywords: str) -> QueryResponse:
         return QueryResponse(query=Query(service="search_docs"), results_count=len(results), results=results)
 
 
-def register():
+def register_service():
     asyncio.create_task(make_search_set_indexes_in_parallel(""))
     template = ServiceTemplate(__MOD_NAME__, None, None, None, None, None)
     service = ServicesManager.realize_service_template(template, None)

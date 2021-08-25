@@ -11,7 +11,6 @@ from defrag.modules.helpers.sync_utils import as_async
 from defrag.modules.helpers.exceptions import ParsingException
 from defrag.modules.helpers.requests import Req
 from bs4 import BeautifulSoup
-from os import environ as env
 import bugzilla
 
 __MOD_NAME__ = "bugs"

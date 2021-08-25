@@ -19,12 +19,18 @@ class SearchQuery(BaseModel):
 
 
 @app.get(f"/{__MOD_NAME__}/")
-async def global_search(keywords: str, scope_str: str) -> QueryResponse:
+async def global_search(keywords: str, scope: str) -> QueryResponse:
     query = Query(service=__MOD_NAME__)
-    sq = SearchQuery(keywords=keywords, scope=scope_str.split(","))
+    sq = SearchQuery(keywords=keywords, scope=[s.strip() for s in scope.split(",")])
+    """
+    TODO: the idea of making registered services a precondition for searching globally
+    was that we would be using some cache. Not the case for now some dropping this precondition
+    until we have a more intelligent solution.
+    
     if missing_services := [s for s in sq.scope if not s in ServicesManager.services.list_enabled()]:
         error = f"You are trying to search from services that have not been enabled yet: {missing_services}"
         return QueryResponse(query=query, error=error)
+    """
     searchers = [f for n, f in search_map.items() if n in sq.scope]
     results = {}
     results_counts = 0
