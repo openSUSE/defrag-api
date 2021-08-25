@@ -143,7 +143,7 @@ async def search_single_source_docs(source: str, keywords: str) -> QueryResponse
 
 
 @app.get("/" + __MOD_NAME__ + "/merged/")
-async def search_merging_sources_docs(keywords: str) -> QueryResponse:
+async def search(keywords: str) -> QueryResponse:
     if not ready_to_index(["leap", "tumbleweed"]):
         results = await make_search_set_indexes_in_parallel(keywords)
         return QueryResponse(query=Query(service="search_docs"), results_count=len(results), results=results)
@@ -152,7 +152,7 @@ async def search_merging_sources_docs(keywords: str) -> QueryResponse:
         return QueryResponse(query=Query(service="search_docs"), results_count=len(results), results=results)
 
 
-def register():
+def register_service():
     asyncio.create_task(make_search_set_indexes_in_parallel(""))
     template = ServiceTemplate(__MOD_NAME__, None, None, None, None, None)
     service = ServicesManager.realize_service_template(template, None)
