@@ -24,7 +24,7 @@ async def global_search(keywords: str, scope: str) -> QueryResponse:
     sq = SearchQuery(keywords=keywords, scope=[s.strip() for s in scope.split(",")])
     """
     TODO: the idea of making registered services a precondition for searching globally
-    was that we would be using some cache. Not the case for now some dropping this precondition
+    was that we would be using some cache. Not the case for now so dropping this precondition
     until we have a more intelligent solution.
     
     if missing_services := [s for s in sq.scope if not s in ServicesManager.services.list_enabled()]:
