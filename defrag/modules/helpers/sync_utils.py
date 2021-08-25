@@ -16,6 +16,7 @@
 
 import asyncio
 from functools import partial, wraps
+from threading import Lock
 from typing import Awaitable, Callable, Iterable
 
 """
@@ -40,6 +41,17 @@ def as_async(f: Callable) -> Callable:
         loop = asyncio.get_running_loop()
         f_saturated = partial(f, *args, **kwargs)
         return await loop.run_in_executor(None, f_saturated)
+    return inner
+
+
+def as_safe_async(f: Callable) -> Callable:
+    @wraps(f)
+    async def inner(*args, **kwargs):
+        loop = asyncio.get_running_loop()
+        def safe_runner():
+            with Lock():
+                return f(*args, **kwargs)
+        return await loop.run_in_executor(None, safe_runner)
     return inner
 
 
