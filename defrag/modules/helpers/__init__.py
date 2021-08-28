@@ -36,5 +36,30 @@ class CacheQuery(Query):
 class QueryResponse(BaseModel):
     query: Query
     results_count: Optional[int] = None
-    results: Optional[Union[List[Any], Dict[str,Any]]] = None
+    results: Optional[Union[List[Any], Dict[str, Any]]] = None
     error: Optional[str] = None
+    message: Optional[str]
+
+
+class EitherErrorOrOk:
+
+    def __init__(self, error: Optional[str] = None, ok: Optional[Union[Dict[str, Any], str]] = None) -> None:
+        if error and ok:
+            raise Exception("Either error XOR ok!!")
+        elif error:
+            self.error = error
+        else:
+            self.ok = ok
+
+    def dict(self) -> Dict[str, Any]:
+        return {"error": self.error} if hasattr(self, "error") else {"ok": self.ok}
+
+
+class FailuresAndSuccesses:
+
+    def __init__(self, failures: List[Any], successes: List[Any]):
+        self.successes = successes
+        self.failures = failures
+
+    def dict(self) -> Dict[str, List[Any]]:
+        return {"successes": self.successes, "failures": self.failures}
