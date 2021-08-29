@@ -254,7 +254,7 @@ class Dispatcher:
         return {"status_code": 200, "item": item}
 
     @staticmethod
-    def has_toretry(response: Dict[str, Any]):
+    def has_toretry(response: Dict[str, Any]) -> bool:
         return response["status_code"] != 200 and response["item"]["retries"] < 3
 
 
