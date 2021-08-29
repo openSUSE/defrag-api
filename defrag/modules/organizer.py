@@ -249,7 +249,7 @@ class Calendar:
         disp = Dispatchable(
             origin=CAL_NAME,
             notification=notification,
-            foreign_key_hash=event.id,
+            id=event.id,
             schedules=schedules
         )
         
@@ -322,7 +322,7 @@ class Calendar:
         """
         Schedules reminders corresponding to a list of fedocal events.
         """
-        to_schedule = [Dispatchable(foreign_key=m.event_id, origin="openSUSE_fedocal", schedules=user_deltas.apply(
+        to_schedule = [Dispatchable(id=m.event_id, origin="openSUSE_fedocal", schedules=user_deltas.apply(
             f"{m.event_date} {m.event_time_start}"), notification=TelegramNotification(body=m.event_information)) for m in events]
         await asyncio.gather(*[Dispatcher.put(m) for m in to_schedule])
         return EitherErrorOrOk(ok="Reminders set!")
@@ -377,7 +377,7 @@ async def post_reminders_for(event_id: int, reminders: Reminders) -> QueryRespon
         return QueryResponse(query=query, error=reply)
 
     def look_up(event_id): 
-        return Calendar.container[event_id]["start"] if event_id in Calendar.container.keys() else None
+        return Calendar.container[event_id] if event_id in Calendar.container.keys() else None
     found = await as_async(look_up)(event_id)
     if not found:
         reply = f"Unable to find this calendar item: {event_id}"

@@ -41,7 +41,7 @@ class Dispatchable(BaseModel):
     notification: Notification
     retries: int = 0
     schedules: List[float] = []
-    foreign_key_hash: Optional[int] = None
+    id: Optional[str] = None
 
 
 class HashedDispatchable(Dispatchable):
@@ -50,7 +50,7 @@ class HashedDispatchable(Dispatchable):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.id = self.foreign_key_hash or hash(str(self.notification))
+        self.id = self.id or str(abs(hash(str(self.notification))))
         self.schedules = sorted(self.schedules, reverse=True)
 
 

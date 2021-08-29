@@ -5,7 +5,7 @@ from itertools import count
 from random import randint
 from typing import Any, Generator, Optional
 from defrag.modules.dispatcher import EmailNotification, Dispatcher
-from defrag.modules.organizer import Calendar, CustomEvent, FedocalEvent, Reminders, FORMAT, Rrule, get_calendar, post_cancel_event, post_events, post_reminders, post_fedocal_events
+from defrag.modules.organizer import Calendar, CustomEvent, FedocalEvent, Reminders, FORMAT, Rrule, get_calendar, post_cancel_event, post_events, post_reminders, post_fedocal_events, post_reminders_for
 from defrag.modules.organizer import Reminders
 import pytest
 
@@ -57,7 +57,6 @@ def fedocal_meetings_factory() -> Generator[FedocalEvent, Any, Any]:
             event_location="openSUSE jitsi meet",
             calendar_name="openSUSE community calendar",
         )
-
 
 @pytest.mark.asyncio
 async def test_reminders():
@@ -138,4 +137,20 @@ async def test_get_calendar():
     print(f"The calendar currently holds {res.results_count} items.")
     Dispatcher.stop()
     assert res.results_count == 3
-    
+
+@pytest.mark.asyncio
+async def test_set_reminders_for():
+    with RedisPool() as conn:
+        conn.flushall()
+    Calendar.viewer = {}
+    Dispatcher.run(60)
+    meeting = next(meetings_factory())
+    reminders = next(reminders_factory())
+    response = await post_events([meeting], reminders)
+    event_id = response.results[0]
+    res = await post_reminders_for(event_id, reminders)
+    print(f"Results: {res}")
+    await asyncio.sleep(1)
+    print(f"Dispatched: {Dispatcher.scheduled}")
+    assert len(list(Dispatcher.scheduled)) == 2
+    Dispatcher.stop()

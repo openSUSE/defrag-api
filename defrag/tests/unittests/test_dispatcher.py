@@ -18,7 +18,7 @@ async def test_Dispatcher():
         poll_do_not_push=True, body="some contents", email_address="to someone", email_object="about something")
     schedules = [(now + timedelta(seconds=n)).timestamp() for n in range(1, 4)]
     dispatchables = [Dispatchable(
-        foreign_key=k, origin="test client", notification=notification, schedules=[s]) for k, s in enumerate(schedules)]
+        id=k, origin="test client", notification=notification, schedules=[s]) for k, s in enumerate(schedules)]
     Dispatcher.run(seconds=1)
     await asyncio.gather(*[Dispatcher.put(d) for d in dispatchables])
     await asyncio.sleep(5)
