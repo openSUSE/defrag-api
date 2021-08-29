@@ -89,7 +89,7 @@ class CustomEvent(BaseModel):
     tags: Optional[List[str]] = None
     restricted: Optional[List[str]] = None
     rrule: Optional[Rrule] = None
-    rruled_occurrences: Optional[List[float]] = None
+    rruled_occurrences: Optional[List[str]] = None
     changelog: Optional[List[Dict[str, Any]]] = None
 
     def apply_rrule(self) -> List[str]:
@@ -255,6 +255,7 @@ class Calendar:
         
         def inserting(event_id: str) -> None:
             event.status = "active"
+            event.rruled_occurrences = future_occurrences
             cls.container[event_id] = event.dict()
         
         # scheduling notifications and running redis job, then updating the viewer
