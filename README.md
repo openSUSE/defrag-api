@@ -1,7 +1,7 @@
 ## Goal
 The goal of this project is to combat the fragmentation between teams, groups and services in openSUSE. 
 
-It seems to us that openUSE has many niche places that don't talk to each other that much, let alone report their activities to hubs accessible to outsiders or potentially interested contributors.
+It seems to us that openSUSE has many niche places that don't talk to each other that much, let alone report their activities to hubs accessible to outsiders or potentially interested contributors.
 
 Also, events and activities are not always visible and more often than not, people would find out about a community event or an outage when it's too late.
 
