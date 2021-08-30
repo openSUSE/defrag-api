@@ -45,6 +45,8 @@ if has_env:
     REDIS_PWD = os.environ.get("REDIS_PWD", None)
     BUGZILLA_USER = os.environ.get("BUGZILLA_USER", None)
     BUGZILLA_PASSWORD = os.environ.get("BUGZILLA_PASSWORD", None)
+    MONGO_PWD=os.environ.get("MONGO_PWD", None)
+    MONGO_NAME=os.environ.get("MONGO_NAME", None)
     TWITTER_CONSUMER_KEY = os.environ.get("TWITTER_CONSUMER_KEY", None)
     TWITTER_CONSUMER_SECRET = os.environ.get("TWITTER_CONSUMER_SECRET", None)
     TWITTER_ACCESS_TOKEN = os.environ.get("TWITTER_ACCESS_TOKEN", None)
@@ -58,6 +60,8 @@ else:
     REDIS_PWD = config["REDIS"]["REDIS_PWD"]
     BUGZILLA_USER = config["BUGZILLA"]["BUGZILLA_USER"]
     BUGZILLA_PASSWORD = config["BUGZILLA"]["BUGZILLA_PASSWORD"]
+    MONGO_PWD=config["MONGO"]["MONGO_PWD"]
+    MONGO_NAME=config["MONGO"]["MONGO_NAME"]
     TWITTER_CONSUMER_KEY = config["TWITTER"]["TWITTER_CONSUMER_KEY"]
     TWITTER_CONSUMER_SECRET = config["TWITTER"]["TWITTER_CONSUMER_SECRET"]
     TWITTER_ACCESS_TOKEN = config["TWITTER"]["TWITTER_ACCESS_TOKEN"]
