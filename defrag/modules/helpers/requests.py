@@ -23,24 +23,17 @@ class Req:
             await cls.session.close()
             cls.session = None
 
-    def __init__(self, url: str, params: Optional[Dict[str, Any]] = None, verb: Optional[str] = "GET", json: Optional[Dict[AnyStr, AnyStr]] = None, closeOnResponse: Optional[bool] = True) -> None:
+    def __init__(self, url: str, params: Optional[Dict[str, Any]] = None, json: Optional[Dict[AnyStr, AnyStr]] = None) -> None:
         self.json = json
         self.params = params
-        self.verb = verb
         self.url = url
 
     async def __aenter__(self) -> Any:
-        if not self.verb in self.implemented_verbs:
-            raise self.ReqException(
-                f"This verb is not implemented {self.verb}")
-        if self.verb == "GET":
+        if not self.json:
             return await self.get_session().get(self.url, params=self.params)
-        if self.verb == "POST":
-            if not self.json:
-                raise self.ReqException(
-                    f"POST-ing requires passing a json argument, as in `Req(ulr, verb='GET', json=...)`.")
-            return self.get_session().post(self.url, json=self.json)
+        else:
+            return await self.get_session().post(self.url, json=self.json)
 
     async def __aexit__(self, *args, **kwargs) -> None:
-        """ Session closing is now a task when main, upon shutting down. """
+        """ Closing session handler offloaded to __main__. """
         pass

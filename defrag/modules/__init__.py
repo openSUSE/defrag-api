@@ -18,6 +18,7 @@ import sys
 from typing import List
 from defrag import LOGGER, LOAD
 
+
 def __list_all_modules() -> List[str]:
     from os.path import dirname, basename, isfile
     import glob

@@ -85,7 +85,7 @@ async def get_twitter() -> QueryResponse:
 
 
 @app.get(f"/{__MOD_NAME__}/search/")
-async def search_twitter(keywords: str) -> QueryResponse:
+async def search(keywords: str) -> QueryResponse:
     results = await search_tweets(keywords)
     query = Query(service=__MOD_NAME__)
     return QueryResponse(query=query, results=results, results_count=len(results))

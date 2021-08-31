@@ -72,6 +72,9 @@ class Services(UserDict):
     def list_on(self, predicate: Callable) -> List[str]:
         return [s.name for s in self.values() if predicate(s)]
 
+    def list_enabled(self) -> List[str]:
+        return self.list_on(lambda s: s.is_enabled)
+
 
 class ServicesManager:
     """

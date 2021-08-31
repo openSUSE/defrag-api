@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from typing import Any, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from pydantic.main import BaseModel
 
 
@@ -36,5 +36,30 @@ class CacheQuery(Query):
 class QueryResponse(BaseModel):
     query: Query
     results_count: Optional[int] = None
-    results: Optional[List[Any]] = None
+    results: Optional[Union[List[Any], Dict[str, Any]]] = None
     error: Optional[str] = None
+    message: Optional[str]
+
+
+class EitherErrorOrOk:
+
+    def __init__(self, error: Optional[str] = None, ok: Optional[Union[Dict[str, Any], str]] = None) -> None:
+        if error and ok:
+            raise Exception("Either error XOR ok!!")
+        elif error:
+            self.error = error
+        else:
+            self.ok = ok
+
+    def dict(self) -> Dict[str, Any]:
+        return {"error": self.error} if hasattr(self, "error") else {"ok": self.ok}
+
+
+class FailuresAndSuccesses:
+
+    def __init__(self, failures: List[Any], successes: List[Any]):
+        self.successes = successes
+        self.failures = failures
+
+    def dict(self) -> Dict[str, List[Any]]:
+        return {"successes": self.successes, "failures": self.failures}
