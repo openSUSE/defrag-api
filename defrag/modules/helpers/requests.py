@@ -14,7 +14,7 @@ class Req:
     @classmethod
     def get_session(cls) -> ClientSession:
         if not cls.session or cls.session.closed:
-            cls.session = ClientSession()
+            cls.session = ClientSession(trust_env=True)
         return cls.session
 
     @classmethod
