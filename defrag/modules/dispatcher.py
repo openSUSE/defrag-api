@@ -124,7 +124,7 @@ class Dispatcher:
         Dispatches the item just in case it is not a scheduled item. Otherwise 
         adds to the scheduled items, if its id is not already keyed in the scheduled dict.
         """
-        LOGGER.info("Started to poll the process queue.")
+        await as_async(LOGGER.info)("Started to poll the process queue.")
         while True:
             item = await cls.process_q.get()
             if not item["schedules"]:
@@ -141,7 +141,7 @@ class Dispatcher:
         and dispatches it. Notice that this behaviour assumes that the interval between 'schedules'
         is not smaller than the interval of 'start_ticking_clock'.
         """
-        LOGGER.info("Started to monitor scheduled items")
+        await as_async(LOGGER.info)("Started to monitor scheduled items")
         while True:
             await asyncio.sleep(interval)
             now_timestamp = datetime.now().timestamp()
@@ -166,7 +166,7 @@ class Dispatcher:
         If the push/sending fails, the item is sent to the queue again unless it has been retried 3 times already (discarded if so). 
         If the sending succeeds, the item is rescheduled if it has remaining scheduled times. Otherwise it is removed from the the scheduled items.
         """
-        LOGGER.info(f"Called dispatch with {len(items)}")
+        await as_async(LOGGER.info)(f"Called dispatch with {len(items)}")
         now_tmp = datetime.now().timestamp()
         to_push = []
         redis_jobs = []
@@ -215,7 +215,7 @@ class Dispatcher:
             response = await res
             i = response["item"]
             if cls.has_toretry(response):
-                LOGGER.warning(f"item sending timed out. Retrying soon.")
+                await as_async(LOGGER.warning)(f"item sending timed out. Retrying soon.")
                 i["retries"] += 1
                 await cls.put(i)
             else:

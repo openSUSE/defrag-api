@@ -1,4 +1,5 @@
 from datetime import datetime
+from defrag.modules.helpers.sync_utils import as_async
 from pydantic.main import BaseModel
 from defrag import LOGGER, app
 from defrag.modules.helpers import CacheQuery, Query, QueryResponse
@@ -45,7 +46,7 @@ class RedditStore(QStore):
                 else:
                     raise Exception("Empty results from r/openSUSE")
             except Exception as err:
-                LOGGER.warn("Unable to fetch r/openSUSE: ", err)
+                await as_async(LOGGER.warn)("Unable to fetch r/openSUSE: ", err)
                 return []
 
     def filter_fresh_items(self, items: List[RedditEntry]) -> List[Dict[str, Any]]:
