@@ -43,16 +43,24 @@ class QueryResponse(BaseModel):
 
 class EitherErrorOrOk:
 
-    def __init__(self, error: Optional[str] = None, ok: Optional[Union[Dict[str, Any], str]] = None) -> None:
+    def __init__(self, error: Optional[str] = None, ok: Optional[Union[Dict[str, Any], List[Any], str]] = None, ok_msg: Optional[str] = None) -> None:
         if error and ok:
             raise Exception("Either error XOR ok!!")
         elif error:
             self.error = error
         else:
             self.ok = ok
+        if ok_msg:
+            self.ok_msg = ok_msg
 
     def dict(self) -> Dict[str, Any]:
-        return {"error": self.error} if hasattr(self, "error") else {"ok": self.ok}
+        res = {"ok": self.ok} if hasattr(self, "ok") else {"error": self.error}
+        if hasattr(self, "ok_msg"):
+            return {**res, "ok_msg": self.ok_msg}
+        return res
+
+    def is_ok(self) -> Optional[Union[Dict[str, Any], List[Any], str]]:
+        return self.ok if hasattr(self, "ok") else None
 
 
 class FailuresAndSuccesses:
