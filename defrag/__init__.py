@@ -16,6 +16,10 @@
 
 import logging
 from fastapi import FastAPI
+from pathlib import Path
+import configparser
+import os
+
 
 LOGGER = logging.getLogger(__name__)
 # TODO: Change the logformat so that it fits uvicorn
@@ -30,8 +34,34 @@ else:
         format=LOGFORMAT,
         level=logging.INFO)
 
-NO_LOAD = []
 LOAD = []
 
+user_env = Path(".env")
+has_env = user_env.is_file() or bool(os.environ.get('ENV', False))
+
+if has_env:
+    REDIS_HOST = os.environ.get("REDIS_HOST", None)
+    REDIS_PORT = int(os.environ.get("REDIS_PORT", None))
+    REDIS_PWD = os.environ.get("REDIS_PWD", None)
+    BUGZILLA_USER = os.environ.get("BUGZILLA_USER", None)
+    BUGZILLA_PASSWORD = os.environ.get("BUGZILLA_PASSWORD", None)
+    TWITTER_CONSUMER_KEY = os.environ.get("TWITTER_CONSUMER_KEY", None)
+    TWITTER_CONSUMER_SECRET = os.environ.get("TWITTER_CONSUMER_SECRET", None)
+    TWITTER_ACCESS_TOKEN = os.environ.get("TWITTER_ACCESS_TOKEN", None)
+    TWITTER_ACCESS_TOKEN_SECRET = os.environ.get(
+        "TWITTER_ACCESS_TOKEN_SECRET", None)
+else:
+    config = configparser.ConfigParser()
+    config.read("config.ini")
+    REDIS_HOST = config["REDIS"]["REDIS_HOST"] 
+    REDIS_PORT = int(config["REDIS"]["REDIS_PORT"])
+    REDIS_PWD = config["REDIS"]["REDIS_PWD"]
+    BUGZILLA_USER = config["BUGZILLA"]["BUGZILLA_USER"]
+    BUGZILLA_PASSWORD = config["BUGZILLA"]["BUGZILLA_PASSWORD"]
+    TWITTER_CONSUMER_KEY = config["TWITTER"]["TWITTER_CONSUMER_KEY"]
+    TWITTER_CONSUMER_SECRET = config["TWITTER"]["TWITTER_CONSUMER_SECRET"]
+    TWITTER_ACCESS_TOKEN = config["TWITTER"]["TWITTER_ACCESS_TOKEN"]
+    TWITTER_ACCESS_TOKEN_SECRET = config["TWITTER"]["TWITTER_ACCESS_TOKEN_SECRET"]
+
 # Initialize app
-app = FastAPI()
+app = FastAPI(docs_url=None, redoc_url=None)

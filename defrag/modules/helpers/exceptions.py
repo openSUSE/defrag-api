@@ -14,11 +14,27 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from defrag import app
-
-__MOD_NAME__ = "demo"
+from typing import Any, Dict, List, Optional, Union
 
 
-@app.get("/" + __MOD_NAME__ + "/")
-async def root():
-    return {"message": "Demo module is working!"}
+class DefragException(Exception):
+    '''Base class for other exceptions'''
+
+    def __init__(self, message=""):
+        self.message = message
+        super().__init__(self.message)
+
+
+class BugzillaException(DefragException):
+    '''Raised when a python-bugzilla error occures.'''
+    pass
+
+
+class ParsingException(DefragException):
+    '''Raised when something goes wrong while parsing a webpage.'''
+    pass
+
+
+class NetworkException(DefragException):
+    '''Raised when a network error occures.'''
+    pass
