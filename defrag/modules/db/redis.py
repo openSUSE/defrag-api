@@ -2,7 +2,7 @@ from os import environ as env
 from typing import Optional, Union
 from redis import Redis, BlockingConnectionPool
 from redis.client import Pipeline
-from defrag import REDIS_HOST, REDIS_PORT, REDIS_PWD, LOGGER
+from defrag import Settings, LOGGER
 
 """ 
 Using `BlockingConnectionPool` instead of the default
@@ -24,10 +24,11 @@ class RedisPool:
     def open(cls) -> None:
         if not cls.pool:
             LOGGER.debug("Opening pool...")
+            settings = Settings.get_settings()
             cls.pool = BlockingConnectionPool(
-                host=REDIS_HOST,
-                port=REDIS_PORT,
-                password=REDIS_PWD,
+                host=settings["redis_host"],
+                port=settings["redis_port"],
+                password=settings["redis_pwd"],
             )
 
     @classmethod

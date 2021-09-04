@@ -3,7 +3,7 @@ from datetime import datetime
 from defrag.modules.db.redis import RedisPool
 from defrag.modules.helpers.sync_utils import as_async
 from defrag.modules.helpers.data_manipulation import compose
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 from pottery import RedisDeque, RedisDict
 
 # TODO Maybe we want to deprecate this? :) It was a good first pass but I think we have moved along.

@@ -6,7 +6,7 @@ from defrag.modules.helpers import Query, CacheQuery, QueryResponse
 from defrag.modules.helpers.services_manager import Run, ServiceTemplate, ServicesManager
 from defrag.modules.helpers.cache_stores import CacheStrategy, DStore, RedisCacheStrategy
 from typing import Any, Dict, List, Optional, Union
-from defrag import app, BUGZILLA_USER, BUGZILLA_PASSWORD
+from defrag import app, Settings
 from defrag.modules.helpers.sync_utils import as_async
 from defrag.modules.helpers.exceptions import ParsingException
 from defrag.modules.helpers.requests import Req
@@ -43,8 +43,9 @@ class BugzillaQueryEntry(BaseModel):
 
 def login() -> Bugzilla:
     global bzapi
+    settings = Settings.get_settings()
     handler = bugzilla.Bugzilla(
-        url=URL, user=BUGZILLA_USER, password=BUGZILLA_PASSWORD)
+        url=URL, user=settings["bugzilla_user"], password=settings["bugzilla_password"])
     if not handler.logged_in:
         raise Exception(
             "Login failed. Please double-check the credentials provided by your environment.")

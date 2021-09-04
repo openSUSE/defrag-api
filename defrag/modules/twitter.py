@@ -1,7 +1,7 @@
 from datetime import datetime
 from pydantic.main import BaseModel
 from defrag.modules.helpers import CacheQuery, Query, QueryResponse
-from defrag import LOGGER, app, TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET
+from defrag import LOGGER, app, Settings
 from defrag.modules.helpers.cache_stores import CacheStrategy, QStore, RedisCacheStrategy
 from defrag.modules.helpers.sync_utils import as_async
 from defrag.modules.helpers.services_manager import Run, ServiceTemplate, ServicesManager
@@ -20,9 +20,9 @@ to model data answering the question: "What are people talking about recently?"
 
 __MOD_NAME__ = "twitter"
 
-
-api = twitter.Api(consumer_key=TWITTER_CONSUMER_KEY, consumer_secret=TWITTER_CONSUMER_SECRET,
-                  access_token_key=TWITTER_ACCESS_TOKEN, access_token_secret=TWITTER_ACCESS_TOKEN_SECRET)
+settings = Settings.get_settings()
+api = twitter.Api(consumer_key=settings["twitter_consumer_key"], consumer_secret=settings["twitter_consumer_secret"],
+                  access_token_key=settings["twitter_access_token"], access_token_secret=settings["twitter_access_token_secret"])
 
 
 class TwitterEntry(BaseModel):
@@ -41,7 +41,7 @@ class TwitterStore(QStore):
             entries = [TwitterEntry(contents=x.text, created_at_in_seconds=x.created_at_in_seconds, created_at=x.created_at, id_str=x.id_str) for x in await fetch(screen_name="@openSUSE")]
             return sorted(entries, key=attrgetter("created_at"))
         except Exception as err:
-            await as_async (LOGGER.warning)("Unable to fetch from Twitter @openSUSE: ", err)
+            await as_async(LOGGER.warning)("Unable to fetch from Twitter @openSUSE: ", err)
             return []
 
     def filter_fresh_items(self, items: List[TwitterEntry]) -> List[Dict[str, Any]]:
@@ -57,7 +57,7 @@ async def search_tweets(keywords: str) -> List[TwitterEntry]:
         results = await search(raw_query=raw_query)
         return [TwitterEntry(contents=x.text, created_at_in_seconds=x.created_at_in_seconds, created_at=x.created_at, id_str=x.id_str) for x in results]
     except Exception as err:
-        await as_async (LOGGER.warning)("Unable to fetch from Twitter @opensuse: ", err)
+        await as_async(LOGGER.warning)("Unable to fetch from Twitter @opensuse: ", err)
         return []
 
 
