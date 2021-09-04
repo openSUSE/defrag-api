@@ -15,10 +15,70 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import logging
+from typing import Any, Dict, List
 from fastapi import FastAPI
-from pathlib import Path
+from pydantic import BaseSettings
+from functools import lru_cache
 import configparser
-import os
+
+
+class Settings(BaseSettings):
+    """
+    Automatically set by `python-dotenv` upon reading a ./.env file
+    (if any)
+    """
+    admin_emails: List[str] = [
+        "karatekhd@opensuse.org", "nycticorax@opensuse.org"]
+    app_name: str = "defrag-api"
+    app_port: str
+    app_host: int
+    bugzilla_user: str
+    bugzilla_password: str
+    mongo_pwd: str
+    mongo_name: str
+    profile_stats_output_dir: str
+    redis_prod_test_host: str
+    redis_prod_test_port: int
+    redis_prod_test_pwd: str
+    redis_host: str
+    redis_port: int
+    redis_pwd: str
+    telegram_bot_token: str
+    telegram_host: str
+    telegram_path: str
+    twitter_consumer_key: str
+    twitter_consumer_secret: str
+    twitter_access_token: str
+    twitter_access_token_secret: str
+    redis_host: str
+    redis_port: int
+    redis_pwd: str
+
+    class Config:
+        env_file = ".env"
+
+    @staticmethod
+    @lru_cache()
+    def get_settings() -> Dict[str, Any]:
+        """
+        Cached with lru_cache to avoid reading the disk multiple times.
+        """
+        if settings := Settings().dict():
+            return settings
+        else:
+            config = configparser.ConfigParser()
+            config.read("config.ini")
+            return {
+                "redis_host": config["REDIS"]["REDIS_HOST"],
+                "redis_port": int(config["REDIS"]["REDIS_PORT"]),
+                "redis_pwd": config["REDIS"]["REDIS_PWD"],
+                "bugzilla_user": config["BUGZILLA"]["BUGZILLA_USER"],
+                "bugzilla_password": config["BUGZILLA"]["BUGZILLA_PASSWORD"],
+                "twitter_consumer_key": config["TWITTER"]["TWITTER_CONSUMER_KEY"],
+                "twitter_consumer_secret": config["TWITTER"]["TWITTER_CONSUMER_SECRET"],
+                "twitter_access_token": config["TWITTER"]["TWITTER_ACCESS_TOKEN"],
+                "twitter_access_token_secret": config["TWITTER"]["TWITTER_ACCESS_TOKEN_SECRET"],
+            }
 
 
 LOGGER = logging.getLogger(__name__)
@@ -35,33 +95,5 @@ else:
         level=logging.INFO)
 
 LOAD = []
-
-user_env = Path(".env")
-has_env = user_env.is_file() or bool(os.environ.get('ENV', False))
-
-if has_env:
-    REDIS_HOST = os.environ.get("REDIS_HOST", None)
-    REDIS_PORT = int(os.environ.get("REDIS_PORT", None))
-    REDIS_PWD = os.environ.get("REDIS_PWD", None)
-    BUGZILLA_USER = os.environ.get("BUGZILLA_USER", None)
-    BUGZILLA_PASSWORD = os.environ.get("BUGZILLA_PASSWORD", None)
-    TWITTER_CONSUMER_KEY = os.environ.get("TWITTER_CONSUMER_KEY", None)
-    TWITTER_CONSUMER_SECRET = os.environ.get("TWITTER_CONSUMER_SECRET", None)
-    TWITTER_ACCESS_TOKEN = os.environ.get("TWITTER_ACCESS_TOKEN", None)
-    TWITTER_ACCESS_TOKEN_SECRET = os.environ.get(
-        "TWITTER_ACCESS_TOKEN_SECRET", None)
-else:
-    config = configparser.ConfigParser()
-    config.read("config.ini")
-    REDIS_HOST = config["REDIS"]["REDIS_HOST"] 
-    REDIS_PORT = int(config["REDIS"]["REDIS_PORT"])
-    REDIS_PWD = config["REDIS"]["REDIS_PWD"]
-    BUGZILLA_USER = config["BUGZILLA"]["BUGZILLA_USER"]
-    BUGZILLA_PASSWORD = config["BUGZILLA"]["BUGZILLA_PASSWORD"]
-    TWITTER_CONSUMER_KEY = config["TWITTER"]["TWITTER_CONSUMER_KEY"]
-    TWITTER_CONSUMER_SECRET = config["TWITTER"]["TWITTER_CONSUMER_SECRET"]
-    TWITTER_ACCESS_TOKEN = config["TWITTER"]["TWITTER_ACCESS_TOKEN"]
-    TWITTER_ACCESS_TOKEN_SECRET = config["TWITTER"]["TWITTER_ACCESS_TOKEN_SECRET"]
-
 # Initialize app
 app = FastAPI(docs_url=None, redoc_url=None)
