@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from collections import UserDict
+from defrag.modules.helpers.sync_utils import as_async
 from defrag.modules.helpers import CacheQuery, QueryResponse
 from typing import Any, Awaitable, Callable, Coroutine, Dict, List, Optional
 from defrag.modules.helpers.cache_stores import CacheStrategy, QueryException, Store
@@ -141,12 +142,12 @@ class ServicesManager:
                 if items := await cls.services[serv_name].cache_store.fetch_items():
                     await cls.services[serv_name].cache_store.update_on_filtered_fresh(
                         items)
-                    LOGGER.info(f"Monitor: service {serv_name} was refreshed")
+                    await as_async (LOGGER.info)(f"Monitor: service {serv_name} was refreshed")
                 else:
-                    LOGGER.warning(
+                    await as_async (LOGGER.warning)(
                         f"Monitor: service {serv_name} could not be refreshed, even though no error occurred.")
             except Exception as error:
-                LOGGER.error(f"Service {serv_name} threw an error: {error}")
+                await as_async (LOGGER.error)(f"Service {serv_name} threw an error: {error}")
         while True:
             await asyncio.sleep(interval)
             cls.monitor_is_running = True
