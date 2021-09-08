@@ -25,7 +25,7 @@ from defrag.modules import ALL_MODULES
 IMPORTED = {}
 
 
-def main() -> None:
+def import_modules() -> None:
     for module_name in ALL_MODULES:
         imported_module = importlib.import_module(
             "defrag.modules." + module_name)
@@ -41,17 +41,19 @@ def main() -> None:
 
 
 @app.on_event("startup")
-async def register_modules_as_services() -> None:
+async def startup() -> None:
+    import_modules()
     """ Registers all modules implementing 'register_service()'. """
     with RedisPool() as conn:
         conn.flushall()
     for service in IMPORTED.values():
         if hasattr(service, "register_service"):
+            print(f"Registering... {service}")
             service.register_service()
 
 
 @app.on_event("shutdown")
-async def close_session() -> None:
+async def shutdown() -> None:
     await Req.close_session()
 
 
@@ -66,5 +68,5 @@ def overridden_redoc():
 
 
 if __name__ == "__main__":
-    main()
+    import_modules()
     uvicorn.run(app, host="0.0.0.0", port=8000)
