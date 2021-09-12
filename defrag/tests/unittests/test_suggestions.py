@@ -31,3 +31,11 @@ def test_create():
             "/suggestions/create/", json={"title": "title", "description": "description", "creator_id": "123"})
         print(response)
         assert response.status_code == 200
+
+
+def test_get():
+    with RedisPool() as conn:
+        conn.flushall()
+    with TestClient(app) as client:
+        response = client.get("/suggestions")
+        assert response.status_code == 200
