@@ -1,5 +1,5 @@
 import asyncio
-from defrag.modules.docs import register, ready_to_index
+from defrag.modules.docs import register_service, ready_to_index
 from defrag import app
 from fastapi.testclient import TestClient
 import pytest
