@@ -21,21 +21,9 @@ FROM opensuse/tumbleweed
 ENV ENV "True"
 EXPOSE 8000
 
-# This is currently disabled because some contributors think it is to early to create packages.
-# This is, however, the way it is going to work in the future.
-# TODO: Change me!
-# RUN zypper ar https://download.opensuse.org/repositories/home:/KaratekHD:/defrag/openSUSE_Tumbleweed/ defrag
-# RUN zypper --gpg-auto-import-keys ref
-# RUN zypper --non-interactive install python38-defrag-api
-
-RUN zypper --non-interactive install python38-base python38-pip git
-
-# TODO: We need to do this with main for the deployment
-RUN git clone -b karatek/work/container https://github.com/openSUSE/defrag-api.git 
-
-WORKDIR defrag-api
-
-RUN pip-3.8 install -r requirements.txt
+RUN zypper ar https://download.opensuse.org/repositories/home:/KaratekHD:/defrag/openSUSE_Tumbleweed/ defrag
+RUN zypper --gpg-auto-import-keys ref
+RUN zypper --non-interactive install python38-defrag-api
 
 CMD ["python3.8", "-m", "defrag"]
 
