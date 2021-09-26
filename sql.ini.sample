@@ -1,0 +1,7 @@
+[SQLSETTINGS]
+DB_ENGINE = postgresql
+DB_USERNAME = username
+DB_PASSWORD = password
+DB_ADRESSES = 127.0.0.1
+DB_PORT = 5432
+DB_DATABASE = database
