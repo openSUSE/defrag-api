@@ -26,9 +26,14 @@ PyYAML = "==5.4.1"
 Pyrogram = "==1.2.9"
 async_lru = "==1.0.2"
 TgCrypto = "==1.2.2"
+python-dateutil = "*"
+atoma = "*"
+beautifulsoup4 = "*"
+python-bugzilla = "*"
+aiohttp = "*"
 
 [dev-packages]
 autopep8 = "*"
 
 [requires]
-python_version = "3.9"
+python_version = "3.8"
