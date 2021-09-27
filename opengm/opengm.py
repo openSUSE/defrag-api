@@ -1,7 +1,10 @@
 from typing import Any, List, Tuple
 
-from pyrogram import Client, __version__
+from pyrogram import Client, __version__, filters
 from pyrogram.types import Message
+from functools import partial
+
+command = partial(filters.command, prefixes="/")
 
 
 class Opengm(Client, Message):
@@ -37,3 +40,8 @@ class Opengm(Client, Message):
         user_id = message.from_user.id
         chat_id = message.chat.id
         return user_id in self.admins[chat_id]
+
+
+@Opengm.on_message(filters.command("test"))
+async def test(cl: Client, msg: Message):
+    await msg.reply("Test!")
