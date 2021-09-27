@@ -9,7 +9,15 @@ from opengm.utils.commands import get_args
 # Do not register this plugin!
 
 LOGGER = logging.getLogger(__name__)
-HELPTEXT = "Hey there! My name is {}.\nI'm a modular group management bot with a few fun extras! Have a look at the following for an idea of some of the things I can help you with.\n\n**Main** commands avaliable:\n - /start: start the bot\n - /help: PM's this message.\n - /help <module name>: PM's you help for that module."
+HELPTEXT = """
+Hey there! My name is {}.
+I'm a modular group management bot with a few fun extras! Have a look at the following for an idea of some of the things I can help you with.
+
+**Main** commands avaliable:
+- /start: start the bot
+- /help: PM's this message.
+- /help <module name>: PM's you help for that module.
+"""
 
 
 @Opengm.on_message(filters.command("help"))
