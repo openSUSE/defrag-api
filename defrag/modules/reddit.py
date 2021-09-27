@@ -1,11 +1,10 @@
 from datetime import datetime
 from defrag.modules.helpers.sync_utils import as_async
 from pydantic.main import BaseModel
-from defrag import LOGGER, app
-from defrag.modules.helpers import CacheQuery, Query, QueryResponse
+from defrag import LOGGER
 from defrag.modules.helpers.requests import Req
 from defrag.modules.helpers.cache_stores import CacheStrategy, QStore, RedisCacheStrategy
-from defrag.modules.helpers.services_manager import Run, ServiceTemplate, ServicesManager
+from defrag.modules.helpers.services_manager import ServiceTemplate, ServicesManager
 import atoma
 from typing import Any, Dict, List
 from operator import attrgetter
@@ -80,16 +79,3 @@ def register_service():
     service = ServicesManager.realize_service_template(
         reddit, RedditStore(service_key))
     ServicesManager.register_service(name, service)
-
-
-@app.get("/" + __MOD_NAME__ + "/search/")
-async def search(keywords: str) -> QueryResponse:
-    results = await search_reddit(keywords)
-    query = Query(service=__MOD_NAME__)
-    return QueryResponse(query=query, results=results, results_count=len(results))
-
-
-@app.get(f"/{__MOD_NAME__}/")
-async def get_reddit() -> QueryResponse:
-    query = CacheQuery(service="reddit", item_key=None)
-    return await Run.query(query, None)

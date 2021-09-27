@@ -1,10 +1,9 @@
 from datetime import datetime
 from pydantic.main import BaseModel
-from defrag.modules.helpers import CacheQuery, Query, QueryResponse
-from defrag import LOGGER, app, TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET
+from defrag import LOGGER, TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET
 from defrag.modules.helpers.cache_stores import CacheStrategy, QStore, RedisCacheStrategy
 from defrag.modules.helpers.sync_utils import as_async
-from defrag.modules.helpers.services_manager import Run, ServiceTemplate, ServicesManager
+from defrag.modules.helpers.services_manager import ServiceTemplate, ServicesManager
 import twitter
 from typing import Any, Dict, List
 from operator import attrgetter
@@ -79,13 +78,3 @@ def register_service():
     ServicesManager.register_service(name, service)
 
 
-@app.get(f"/{__MOD_NAME__}/")
-async def get_twitter() -> QueryResponse:
-    return await Run.query(CacheQuery(service="twitter", item_key="id_str"))
-
-
-@app.get(f"/{__MOD_NAME__}/search/")
-async def search(keywords: str) -> QueryResponse:
-    results = await search_tweets(keywords)
-    query = Query(service=__MOD_NAME__)
-    return QueryResponse(query=query, results=results, results_count=len(results))

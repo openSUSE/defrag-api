@@ -1,8 +1,7 @@
 
 from asyncio.tasks import Task, wait_for
 from datetime import datetime
-from defrag import LOGGER, app
-from defrag.modules.helpers import Query, QueryResponse
+from defrag import LOGGER
 from defrag.modules.db.redis import RedisPool
 from defrag.modules.helpers.requests import Req
 from defrag.modules.helpers.data_manipulation import dropwhile_takeif
@@ -257,9 +256,3 @@ class Dispatcher:
     def has_toretry(response: Dict[str, Any]) -> bool:
         return response["status_code"] != 200 and response["item"]["retries"] < 3
 
-
-@app.get(f"/{__MODULE_NAME__}/poll_due/")
-async def poll_due(sync: Optional[bool] = None) -> QueryResponse:
-    query = Query(service=__MODULE_NAME__)
-    results = await Dispatcher.poll_due(True if sync is None else sync)
-    return QueryResponse(query=query, results_count=len(results), results=results)
