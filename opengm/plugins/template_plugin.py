@@ -11,4 +11,4 @@ async def ping(cl: Client, message: Message) -> None:
     start = time.time()
     reply = await message.reply_text("...")
     delta_ping = time.time() - start
-    await reply.edit_text(f"**OpenSUSE Bot Test!** `{delta_ping * 1000:.3f} ms`")
+    await reply.edit_text(f"**openSUSE Bot Test!** `{delta_ping * 1000:.3f} ms`")
