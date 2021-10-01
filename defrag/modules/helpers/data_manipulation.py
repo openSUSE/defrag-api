@@ -15,8 +15,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 from functools import reduce
-from itertools import dropwhile
-from typing import Any, Callable, Generator, Iterable, List, Tuple
+from itertools import islice
+from typing import Any, Callable, Iterable, List, Optional, Tuple
 
 """
 Some utilities for doing data manipulation.
@@ -39,12 +39,7 @@ def base_step(acc, val):
 
 
 def make_xform(*reducers: Tuple[Callable]) -> Callable:
-    def inner(step):
-        res = step
-        for reduc in reducers:
-            res = reduc(res)
-        return res
-    return inner
+    return reduce(compose, reducers)
 
 
 def make_transducer(xform: Callable, step: Callable, folder: List[Any] = []) -> Callable:
@@ -89,9 +84,13 @@ def find_first(it: Iterable, relation: Callable[[Any, Any], bool], origin: Any) 
     return -1
 
 
-def dropwhile_takeif(it: Iterable, drop_condition: Callable[[Any], bool], take_condition: Callable[[Any], bool]) -> Generator[Any, Any, Any]:
-    def drop(x): return drop_condition(x)
-    def keep(x): return take_condition(x)
-    for item in dropwhile(drop, it):
-        if keep(item):
-            yield item
+def filter_sort_count(
+    it: Iterable[Any],
+    filter_pred: Optional[Callable[[Any], bool]] = None,
+    count: Optional[int] = None,
+    sort_pred: Optional[Callable[[Any], bool]] = None,
+    reverse: bool = False
+) -> List[Any]:
+    filtered = (x for x in it if filter_pred(x)) if filter_pred else (x for x in it)
+    counted = (x for x in islice(filtered, count)) if count else filtered
+    return sorted(counted, key=lambda item: sort_pred(item), reverse=reverse) if sort_pred else sorted(counted, reverse=reverse)
