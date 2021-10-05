@@ -14,8 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+from typing import Any, Dict, List, Optional, Union
+
+
 class DefragException(Exception):
     '''Base class for other exceptions'''
+
     def __init__(self, message=""):
         self.message = message
         super().__init__(self.message)
@@ -29,6 +33,7 @@ class BugzillaException(DefragException):
 class ParsingException(DefragException):
     '''Raised when something goes wrong while parsing a webpage.'''
     pass
+
 
 class NetworkException(DefragException):
     '''Raised when a network error occures.'''

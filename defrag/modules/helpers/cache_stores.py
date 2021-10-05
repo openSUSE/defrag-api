@@ -148,7 +148,7 @@ class DStore(Store):
     @as_async
     def update_container_return_fresh_items(self, items: List[Any]) -> List[Any]:
         for item in items:
-            self.container[getattr(item, self.dict_key)] = item
+            self.container[item[self.dict_key]] = item
         self.last_update = datetime.now()
         return items
 

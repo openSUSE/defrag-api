@@ -15,7 +15,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 from functools import reduce
-from typing import Any, Callable, Iterable, List, Tuple
+from itertools import dropwhile
+from typing import Any, Callable, Generator, Iterable, List, Tuple
 
 """
 Some utilities for doing data manipulation.
@@ -65,12 +66,32 @@ def partition_left_right(xs: Iterable, predicate: Callable) -> Tuple[List[Any], 
     return reduce(reducer, xs, ([], []))
 
 
-def find_first(_it: Iterable, relation: Callable[[Any, Any], bool], origin: Any) -> int:
-    if not _it:
+def find_first_nogen(it: Iterable, relation: Callable[[Any, Any], bool], origin: Any) -> int:
+    if not it:
         return 0
-    index = -1
-    for i, e in enumerate(_it):
+    for i, e in enumerate(it):
         if relation(e, origin):
-            index = i
-            break
-    return index
+            return i
+    return -1
+
+
+def find_first(it: Iterable, relation: Callable[[Any, Any], bool], origin: Any) -> int:
+    if not it:
+        return 0
+
+    def gen():
+        for i, e in enumerate(it):
+            if relation(e, origin):
+                yield i
+                return
+    for res in gen():
+        return res
+    return -1
+
+
+def dropwhile_takeif(it: Iterable, drop_condition: Callable[[Any], bool], take_condition: Callable[[Any], bool]) -> Generator[Any, Any, Any]:
+    def drop(x): return drop_condition(x)
+    def keep(x): return take_condition(x)
+    for item in dropwhile(drop, it):
+        if keep(item):
+            yield item

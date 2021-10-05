@@ -35,7 +35,7 @@ indexes = {
 
 
 async def get_data(source: str) -> Any:
-    async with Req(indexes[source]["url"], closeOnResponse=False) as result:
+    async with Req(indexes[source]["url"]) as result:
         if source == "tumbleweed":
             return await result.read()
         return await result.text()

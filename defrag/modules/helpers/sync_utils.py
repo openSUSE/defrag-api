@@ -16,7 +16,8 @@
 
 import asyncio
 from functools import partial, wraps
-from typing import Awaitable, Callable, Iterable
+from threading import Lock
+from typing import Awaitable, Callable, Iterable, List
 
 """
 We want to use `as_async` and `to_async` in all these cases where we need to 
@@ -43,6 +44,17 @@ def as_async(f: Callable) -> Callable:
     return inner
 
 
+def as_safe_async(f: Callable) -> Callable:
+    @wraps(f)
+    async def inner(*args, **kwargs):
+        loop = asyncio.get_running_loop()
+        def safe_runner():
+            with Lock():
+                return f(*args, **kwargs)
+        return await loop.run_in_executor(None, safe_runner)
+    return inner
+
+
 async def iterate_off_thread(f: Callable, iterable: Iterable):
     def inner(): return [f() for _ in iterable]
     return await as_async(inner)()
@@ -51,3 +63,8 @@ async def iterate_off_thread(f: Callable, iterable: Iterable):
 async def map_off_thread(f: Callable, iterable: Iterable):
     def inner(): return [f(x) for x in iterable]
     return await as_async(inner)()
+
+
+def run_redis_jobs(jobs: List[Callable[[], None]]) -> None:
+    for f in jobs:
+        f()

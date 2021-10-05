@@ -41,7 +41,7 @@ class TwitterStore(QStore):
             entries = [TwitterEntry(contents=x.text, created_at_in_seconds=x.created_at_in_seconds, created_at=x.created_at, id_str=x.id_str) for x in await fetch(screen_name="@openSUSE")]
             return sorted(entries, key=attrgetter("created_at"))
         except Exception as err:
-            LOGGER.warning("Unable to fetch from Twitter @openSUSE: ", err)
+            await as_async (LOGGER.warning)("Unable to fetch from Twitter @openSUSE: ", err)
             return []
 
     def filter_fresh_items(self, items: List[TwitterEntry]) -> List[Dict[str, Any]]:
@@ -57,7 +57,7 @@ async def search_tweets(keywords: str) -> List[TwitterEntry]:
         results = await search(raw_query=raw_query)
         return [TwitterEntry(contents=x.text, created_at_in_seconds=x.created_at_in_seconds, created_at=x.created_at, id_str=x.id_str) for x in results]
     except Exception as err:
-        LOGGER.warning("Unable to fetch from Twitter @opensuse: ", err)
+        await as_async (LOGGER.warning)("Unable to fetch from Twitter @opensuse: ", err)
         return []
 
 
