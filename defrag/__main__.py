@@ -64,7 +64,7 @@ def overridden_swagger():
 def overridden_redoc():
     return get_redoc_html(openapi_url="/openapi.json", title="FastAPI", redoc_favicon_url="https://static.opensuse.org/favicon.svg")
 
+main()
 
 if __name__ == "__main__":
-    main()
     uvicorn.run(app, host="0.0.0.0", port=8000)
