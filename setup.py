@@ -10,7 +10,7 @@ setup(
     license = "GPL3",
     keywords = "openSUSE REST fastapi",
     url = "https://github.com/openSUSE/defrag-api",
-    packages=['defrag', 'defrag.modules', 'defrag.profiling', 'defrag.tests', 'defrag.modules.helpers', 'defrag.modules.db'],
+    packages=['defrag', 'defrag.modules', 'defrag.profiling', 'defrag.tests', 'defrag.modules.helpers', 'defrag.modules.db', 'opengm', 'opengm.plugins'],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Topic :: Software Development :: Libraries",
