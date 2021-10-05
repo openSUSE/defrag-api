@@ -52,7 +52,7 @@ if has_env:
         "TWITTER_ACCESS_TOKEN_SECRET", None)
 else:
     config = configparser.ConfigParser()
-    config.read("config.ini")
+    config.read(["config.ini", "opengm.ini", "opensuse.ini"])
     REDIS_HOST = config["REDIS"]["REDIS_HOST"] 
     REDIS_PORT = int(config["REDIS"]["REDIS_PORT"])
     REDIS_PWD = config["REDIS"]["REDIS_PWD"]
@@ -65,3 +65,6 @@ else:
 
 # Initialize app
 app = FastAPI(docs_url=None, redoc_url=None)
+
+def run() -> None:
+    pass
