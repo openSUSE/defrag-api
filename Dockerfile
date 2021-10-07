@@ -8,7 +8,7 @@
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
@@ -21,9 +21,8 @@ FROM opensuse/tumbleweed
 ENV ENV "True"
 EXPOSE 8000
 
-RUN zypper ar https://download.opensuse.org/repositories/home:/KaratekHD:/defrag/openSUSE_Tumbleweed/ defrag
+RUN zypper ar https://download.opensuse.org/repositories/openSUSE:infrastructure:defrag/openSUSE_Tumbleweed/ defrag
 RUN zypper --gpg-auto-import-keys ref
-RUN zypper --non-interactive install python38-defrag-api
+RUN zypper --non-interactive install --recommends python38-defrag-api python38-gunicorn
 
-CMD ["python3.8", "-m", "defrag"]
-
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "defrag.__main__:app"]
