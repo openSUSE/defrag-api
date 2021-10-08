@@ -12,7 +12,7 @@ Using Podman is probably the easiest method.
 ### Building the container yourself
 1. Clone this repository and navigate into it.
 2. Make sure you have Podman installed: `sudo zypper install podman`
-3. Build the container: `podman build . -t defrag`
+3. Build the container: `sudo podman build . -t defrag`
 4. Create a .env file as described in [configuration.md](configuration.md).
 5. Run the container: `podman run --env-file /path/to/env/file -p 8080:8000 defrag`. Replace the `/path/to/env/file` with the actual path tp your env file.
 
