@@ -37,6 +37,9 @@ _Cross-platform (Matrix, Telegram) moderation_ (depends on: https://github.com/o
 - - [ ] search for Progress / Pagure
 - - [ ] search for people/activities/events
 
+## How to deploy?
+Please see [deploying.md](deploying.md) for information on how to deploy the project.
+
 ## How to contribute?
 1. Set up your environment.
 2. Think about what you want to change or what feature you want to add. Optionnally, talk to us about it at https://t.me/openSUSE_defrag. Ask as many questions as you need.
