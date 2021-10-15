@@ -4,7 +4,6 @@ from defrag.modules.helpers import Query, QueryResponse
 from typing import List
 from pydantic import BaseModel
 from defrag import app
-from defrag.modules.helpers.services_manager import ServicesManager
 import asyncio
 
 __MOD_NAME__ = "global_search"

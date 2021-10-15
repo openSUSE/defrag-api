@@ -1,5 +1,6 @@
+from datetime import datetime
 from defrag import app
-from defrag.modules.helpers.services_manager import ServiceTemplate, ServicesManager
+from defrag.modules.helpers.cache_manager import Cache, Service
 from defrag.modules.helpers.requests import Req
 from defrag.modules.helpers import Query, QueryResponse
 from lunr import lunr
@@ -11,6 +12,8 @@ import asyncio
 import json
 import sys
 from typing import Any, Dict, List, Tuple
+
+from defrag.modules.helpers.stores import ContainerCfg, WorkerCfg
 
 __MOD_NAME__ = "documentation"
 
@@ -154,6 +157,4 @@ async def search(keywords: str) -> QueryResponse:
 
 def register_service():
     asyncio.create_task(make_search_set_indexes_in_parallel(""))
-    template = ServiceTemplate(__MOD_NAME__, None, None, None, None, None)
-    service = ServicesManager.realize_service_template(template, None)
-    ServicesManager.register_service(__MOD_NAME__, service)
+    Cache.register_service(__MOD_NAME__, Service(datetime.now(), None, True, True))

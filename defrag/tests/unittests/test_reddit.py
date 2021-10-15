@@ -1,28 +1,10 @@
 from defrag import app
 from defrag.modules.db.redis import RedisPool
-from defrag.modules.helpers.requests import Req
-from defrag.modules.reddit import get_reddit, register_service, search
+from defrag.modules.reddit import register_service
 from fastapi.testclient import TestClient
-import pytest
 
 client = TestClient(app)
 register_service()
-
-
-@pytest.mark.asyncio
-async def test_reddit_search():
-    with RedisPool() as conn:
-        conn.flushall()
-    res = await search("tux")
-    print(res)
-
-
-@pytest.mark.asyncio
-async def test_get_reddit():
-    with RedisPool() as conn:
-        conn.flushall()
-    res = await get_reddit()
-    print(res)
 
 
 def test_reddit_handler():

@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from datetime import datetime
 from functools import wraps
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple
 from collections import UserDict
 
-from pottery.cache import redis_cache
+from pottery import RedisDict
 from defrag.modules.db.redis import RedisPool
 from defrag.modules.helpers import CacheQuery, QueryResponse
 from defrag.modules.helpers.stores import BaseStore
@@ -15,7 +15,7 @@ from defrag import LOGGER
 class Service:
     """ Meant to be used a mutable service registered against the ServiceManager. """
     started_at: datetime
-    store: BaseStore
+    store: Optional[BaseStore]
     is_enabled: bool = True
     is_running: bool = True
     shutdown_at: Optional[datetime] = None
@@ -74,13 +74,25 @@ class Cache:
         LOGGER.info("Registered: " + name)
 
 
-def memo_redis(k: str) -> Callable:
-    def decorating(f: Callable) -> Callable:
-        @wraps(f)
-        async def inner(*args, **kwargs) -> Any:
-            return redis_cache(redis=RedisPool().connection, key=k)(await f(*args, **kwargs))
-        return inner
-    return decorating
+class Memo_Redis:
+    
+    redicts: Dict[str, RedisDict] = {}
+
+    @staticmethod
+    def install_decorator(redict_key: str):
+        if not redict_key in Memo_Redis.redicts:
+            Memo_Redis.redicts[redict_key] = RedisDict(redis=RedisPool().connection, key=redict_key)
+        def decorator (f: Callable) -> Callable:
+            @wraps(f)
+            async def inner(*args, **kwargs):
+                func_call_key = hash(f.__name__, *args, **kwargs)
+                if func_call_key in Memo_Redis.redicts[redict_key]:
+                    return QueryResponse(**Memo_Redis.redicts[redict_key][func_call_key])
+                res: QueryResponse = await f(*args, **kwargs)
+                Memo_Redis.redicts[redict_key][func_call_key] = res.dict()
+                return res
+            return inner
+        return decorator
 
 
 class Run:
@@ -95,21 +107,18 @@ class Run:
         self.cache_miss = False
 
     async def __aenter__(self) -> QueryResponse:
-        try:
-            if not Cache.services:
-                raise Exception("Unable to fulfil your request!")
-            self.results = Cache.services[self.query.service].store.evaluate(
-                self.query)
-            if not self.results:
-                self.results = await Cache.services[self.query.service].store.fallback(self.query)
-                self.cache_miss = True
-            if self.results:
-                return QueryResponse(query=self.query, results=self.results, results_count=len(self.results))
-            return QueryResponse(query=self.query, error="No result found", results=[], result_count=0)
-        except Exception as error:
-            return QueryResponse(query=self.query, error=str(error), results=[], result_count=0)
-
+        if not Cache.services:
+            raise Exception("Unable to fulfil your request!")
+        if not Cache.services[self.query.service].store:
+            raise Exception("Service store need to be initialized first.")
+        self.results = Cache.services[self.query.service].store.evaluate(self.query)
+        if not self.results:
+            self.results = await Cache.services[self.query.service].store.fallback(self.query)
+            self.cache_miss = True
+        if self.results:
+            return QueryResponse(query=self.query, results=self.results, results_count=len(self.results))
+        return QueryResponse(query=self.query, error="No result found", results=[], result_count=0)
+        
     async def __aexit__(self, *args, **kwargs) -> None:
         if self.cache_miss:
-            Cache.services[self.query.service].store.update_with(
-                self.results)
+            Cache.services[self.query.service].store.update_with(self.results)

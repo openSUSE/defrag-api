@@ -23,11 +23,9 @@ from defrag import app, LOGGER
 from defrag.modules import ALL_MODULES
 
 IMPORTED = {}
-EXCLUDE = []
-INCLUDE = ["reddit"]
 
 def main() -> None:
-    for module_name in (m for m in ALL_MODULES if m in INCLUDE or not m in EXCLUDE if not INCLUDE):
+    for module_name in (m for m in ALL_MODULES):
         imported_module = importlib.import_module(
             "defrag.modules." + module_name)
         if not hasattr(imported_module, "__MOD_NAME__"):

@@ -1,5 +1,6 @@
 from pydantic.main import BaseModel
 from defrag.modules.helpers import Query, QueryResponse
+from defrag.modules.helpers.cache_manager import Memo_Redis
 from defrag.modules.helpers.requests import Req
 from defrag import app
 from typing import List
@@ -42,6 +43,7 @@ async def search_wikis_as_gen(keywords: str) -> List[WikiGenEntry]:
 
 
 @app.get(f"/{__MOD_NAME__}/search/")
+@Memo_Redis.install_decorator("/" + __MOD_NAME__ + "/search/")
 async def search(keywords: str) -> QueryResponse:
     results = await search_wikis_as_list(keywords)
     query = Query(service=__MOD_NAME__)

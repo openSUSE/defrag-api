@@ -1,18 +1,19 @@
 import asyncio
 from asyncio.tasks import Task
 from datetime import datetime
+from dateutil.parser.isoparser import isoparse
 from pottery.deque import RedisDeque
 from typing import Any, Dict, List
 from operator import attrgetter
-import atoma
+import feedparser
 
 from defrag import app
 from defrag.modules.db.redis import RedisPool
-from defrag.modules.helpers.cache_manager import Cache, Run, Service, memo_redis
+from defrag.modules.helpers.cache_manager import Cache, Memo_Redis, Run, Service
 from defrag.modules.helpers import CacheQuery, Query, QueryResponse
 from pydantic.main import BaseModel
-from defrag.modules.helpers.requests import Req
 from defrag.modules.helpers.stores import ContainerCfg, Logs, StoreWorker, BaseStore, WorkerCfg
+from defrag.modules.helpers.sync_utils import as_async
 
 """ INFO
 This module provides a class to query & store recent reddit posts (sent to "r/openSUSE"). 
@@ -25,12 +26,34 @@ to model data answering the question: "What are people talking about recently?"
 __MOD_NAME__ = "reddit"
 
 
-class RedditStore(StoreWorker, BaseStore):
+class RedditPostEntry(BaseModel):
+    title: str
+    summary: str
+    published: str
+    updated: float
+    link: str
 
-    class RedditEntry(BaseModel):
-        title: str
-        url: str
-        updated: float
+
+async def parser(ressource_url: str) -> List[RedditPostEntry]:
+    try:
+        feed = await as_async(feedparser.parse)(ressource_url)
+        parsed = [RedditPostEntry(
+            title=e.title,
+            summary=e.summary,
+            published=e.published,
+            updated=isoparse(e.updated).timestamp(),
+            link=e.link
+        )
+            for e in feed.entries
+        ]
+        print(f"Just parsed {len(parsed)}")
+        return parsed
+    except Exception as error:
+        print(error)
+        return []
+
+
+class RedditStore(StoreWorker, BaseStore):
 
     def __init__(self, container_config: ContainerCfg, worker_config: WorkerCfg) -> None:
         self.container: RedisDeque = RedisDeque(
@@ -60,21 +83,12 @@ class RedditStore(StoreWorker, BaseStore):
 
     async def refresh(self) -> None:
         if not self.worker_config.worker_fetch_endpoint:
-            raise Exception("Tried to refresh RedditStore, but no worker_config.fetch_endpoint set.")
-        async with Req(self.worker_config.worker_fetch_endpoint) as response:
-            reddit_bytes = await response.read()
-            feed = atoma.parse_atom_bytes(reddit_bytes)
-            entries = [
-                RedditStore.RedditEntry(
-                    title=e.title.value,
-                    url=e.links[0].href,
-                    updated=datetime.timestamp(e.updated)
-                )
-                for e in feed.entries
-            ]
-            sorted_entries = sorted(entries, key=attrgetter(self.updated_key))
-            self.update_with([e.dict() for e in sorted_entries])
-            self.logs.last_refresh = datetime.now().timestamp()
+            raise Exception(
+                "Tried to refresh RedditStore, but no worker_config.fetch_endpoint set.")
+        entries = await parser(self.worker_config.worker_fetch_endpoint)
+        sorted_entries = sorted(entries, key=attrgetter(self.updated_key))
+        self.update_with([e.dict() for e in sorted_entries])
+        self.logs.last_refresh = datetime.now().timestamp()
 
     def evict(self) -> None:
         pass
@@ -96,22 +110,11 @@ class RedditStore(StoreWorker, BaseStore):
         return asyncio.create_task(run())
 
 
-async def search_reddit(keywords: str) -> List[RedditStore.RedditEntry]:
-
-    async with Req("https://www.reddit.com/r/openSUSE/search.rss", params={"q": keywords, "sort": "relevance", "restrict_sr": 1, "type": "link", "limit": 75}) as response:
-        if reddit_bytes := await response.read():
-            feed = atoma.parse_atom_bytes(reddit_bytes)
-            return [RedditStore.RedditEntry(title=e.title.value, url=e.links[0].href, updated=datetime.timestamp(e.updated)) for e in feed.entries]
-        return []
+async def search_reddit(keywords: str) -> List[RedditPostEntry]:
+    return await parser(f"https://www.reddit.com/r/openSUSE/search.rss?q={keywords}&sort=relevance&restrict_sr=1&type=link&limit=75")
 
 
 def register_service():
-    """ 
-    The idea is that modules are registered against the
-    service manager by calling this function. Can be called from @app.on_event('statupp'
-    for example, or from somewhere else in __main__, or from RedditStore. To be discussed,
-    but it's flexible enough to work with any decision.
-    """
     service_key = __MOD_NAME__ + "_default"
     worker_config = WorkerCfg(
         True, "https://www.reddit.com/r/openSUSE.rss", 900, 30)
@@ -122,7 +125,7 @@ def register_service():
 
 
 @app.get("/" + __MOD_NAME__ + "/search/")
-#@memo_redis("/" + __MOD_NAME__ + "/search/")
+@Memo_Redis.install_decorator("/" + __MOD_NAME__ + "/search/")
 async def search(keywords: str) -> QueryResponse:
     results = await search_reddit(keywords)
     query = Query(service=__MOD_NAME__)
