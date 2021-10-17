@@ -14,17 +14,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from defrag.routes import expose_modules_to_handlers
 from defrag.modules.helpers.requests import Req
 from defrag.modules.db.redis import RedisPool
-import uvicorn
-import importlib
-from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from defrag import app, LOGGER
 from defrag.modules import ALL_MODULES
 
-IMPORTED = {}
+from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
+import uvicorn
+import importlib
 
+
+to_register = {}
 
 def main() -> None:
     for module_name in ALL_MODULES:
@@ -33,8 +33,8 @@ def main() -> None:
         if not hasattr(imported_module, "__MOD_NAME__"):
             imported_module.__MOD_NAME__ = imported_module.__name__
         LOGGER.debug("Loaded Module {}".format(imported_module.__MOD_NAME__))
-        if not imported_module.__MOD_NAME__.lower() in IMPORTED:
-            IMPORTED[imported_module.__MOD_NAME__.lower()] = imported_module
+        if not imported_module.__MOD_NAME__.lower() in to_register:
+            to_register[imported_module.__MOD_NAME__.lower()] = imported_module
         else:
             # NO_TWO_MODULES
             raise Exception(
@@ -43,16 +43,14 @@ def main() -> None:
 
 @app.on_event("startup")
 async def register_modules_as_services() -> None:
-
-    # Registers all modules implementing 'register_service()'.
+    """
+    Registers all modules implementing 'register_service()
+    """
     with RedisPool() as conn:
         conn.flushall()
-    for service in IMPORTED.values():
+    for service in to_register.values():
         if hasattr(service, "register_service"):
             service.register_service()
-
-    # Propagate modules names to route handlers
-    expose_modules_to_handlers(list(IMPORTED.keys()))
 
 
 @app.on_event("shutdown")
