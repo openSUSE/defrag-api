@@ -7,6 +7,8 @@ router = APIRouter()
 
 """ Search (merged) """
 
+__MODULE_NAME__ = "search"
+
 
 @router.get("/search/")
 async def handle_global_search(keywords: str, scope: str) -> QueryResponse:

@@ -20,7 +20,7 @@ from collections import Counter
 from defrag import LOGGER, modules
 
 pkgpath = os.path.dirname(modules.__file__)
-discovered_modules = (name for _, name, _ in pkgutil.iter_modules([pkgpath]))
+discovered_modules = [name.lower() for _, name, _ in pkgutil.iter_modules([pkgpath])]
 duplicates = [name for name, count in Counter(discovered_modules).items() if count > 1]
 if duplicates:
     raise Exception(f"Two modules with the same name were declared: {str(duplicates)}")
