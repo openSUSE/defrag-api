@@ -63,10 +63,10 @@ class RedditStore(StoreWorker, BaseStore):
         self.logs = Logs()
         self.worker_config = worker_config
 
-    def to_keep(self, items: List[Any]) -> List[Any]:
+    def to_keep(self, items: List[Dict[str, Any]]) -> List[Any]:
         if not items or not self.container:
-            return [i.dict() for i in items]
-        return [i.dict() for i in items if getattr(i, self.updated_key) > self.logs.last_refresh]
+            return items
+        return [i for i in items if getattr(i, self.updated_key) > self.logs.last_refresh]
 
     def to_evict(self) -> List[Any]:
         return []
