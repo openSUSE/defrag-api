@@ -14,11 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from typing import List
 from defrag.modules.helpers.requests import Req
 from defrag.modules.db.redis import RedisPool
 from defrag import app, LOGGER
 from defrag.modules import ALL_MODULES
+from defrag.routes import *
 
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 import uvicorn
