@@ -85,7 +85,7 @@ class Memo_Redis:
         def decorator (f: Callable) -> Callable:
             @wraps(f)
             async def inner(*args, **kwargs):
-                func_call_key = hash(f.__name__, *args, **kwargs)
+                func_call_key = hash(str(f.__name__) + str(args) + str (kwargs))
                 if func_call_key in Memo_Redis.redicts[redict_key]:
                     return QueryResponse(**Memo_Redis.redicts[redict_key][func_call_key])
                 res: QueryResponse = await f(*args, **kwargs)
