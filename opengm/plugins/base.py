@@ -62,8 +62,6 @@ async def help_button_callback(cl: Client, query: CallbackQuery) -> None:
 
 @Opengm.on_message(filters.command("reload") & filters.group)
 async def reload_admins(bot: Client, message: Message):
-    # if not message.chat.id in admins:
-    #    admins[message.chat.id] = []
     chat = message.chat
     member = await bot.get_chat_member(chat.id, message.from_user.id)
     if member.status not in ('administrator', 'creator'):
@@ -73,4 +71,4 @@ async def reload_admins(bot: Client, message: Message):
     async for i in bot.iter_chat_members(message.chat.id, filter="administrators"):
         list.append(i.user.id)
     admins[message.chat.id] = list
-    print(admins[message.chat.id])
+    await message.reply_text("Admins have been updated.")
