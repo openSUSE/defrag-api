@@ -17,15 +17,18 @@
 import os
 import pkgutil
 from collections import Counter
+from typing import List
 from defrag import LOGGER, modules
 
-pkgpath = os.path.dirname(modules.__file__)
-discovered_modules = [name.lower() for _, name, _ in pkgutil.iter_modules([pkgpath])]
-duplicates = [name for name, count in Counter(discovered_modules).items() if count > 1]
-if duplicates:
-    raise Exception(f"Two modules with the same name were declared: {str(duplicates)}")
+def discover_modules(path: str) -> List[str]:
+    pkgpath = os.path.dirname(path)
+    discovered_modules = [name.lower() for _, name, _ in pkgutil.iter_modules([pkgpath])]
+    duplicates = [name for name, count in Counter(discovered_modules).items() if count > 1]
+    if duplicates:
+        raise Exception(f"Two modules with the same name were declared: {str(duplicates)}")
+    return discovered_modules
 
-ALL_MODULES = sorted(discovered_modules)
+ALL_MODULES = sorted(discover_modules(modules.__file__))
 __all__ = ALL_MODULES + ["ALL_MODULES"]
 
 LOGGER.info("Modules to load: %s", str(ALL_MODULES))

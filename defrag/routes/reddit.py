@@ -1,5 +1,5 @@
 from defrag.modules.helpers import QueryResponse, Query, CacheQuery
-from defrag.modules.helpers.services_manager import Run
+from defrag.modules.helpers.cache_manager import Run
 from defrag.modules.reddit import search_reddit
 
 from fastapi import APIRouter
@@ -17,5 +17,6 @@ async def handle_search_reddit(keywords: str) -> QueryResponse:
 
 @router.get("/reddit/")
 async def get_reddit() -> QueryResponse:
-    query = CacheQuery(service="reddit", item_key=None)
-    return await Run.query(query, None)
+    query = CacheQuery(service="reddit", item_id=None)
+    async with Run(query) as response:
+        return response 

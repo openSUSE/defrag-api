@@ -37,9 +37,6 @@ else:
 user_env = Path(".env")
 has_env = user_env.is_file() or bool(os.environ.get('ENV', False))
 
-
-LOAD = []
-
 if has_env:
     REDIS_HOST = os.environ.get("REDIS_HOST", None)
     REDIS_PORT = int(os.environ.get("REDIS_PORT", None))

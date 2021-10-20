@@ -6,9 +6,8 @@ from bugzilla.base import Bugzilla
 from pydantic.main import BaseModel
 
 
-from defrag.modules.helpers import Query, CacheQuery, QueryResponse
-from defrag.modules.helpers.cache_manager import Cache, Memo_Redis, Run, Service
-from defrag import app, BUGZILLA_USER, BUGZILLA_PASSWORD
+from defrag.modules.helpers.cache_manager import Cache, Service
+from defrag import BUGZILLA_USER, BUGZILLA_PASSWORD
 from defrag.modules.helpers.sync_utils import as_async
 from defrag.modules.helpers.exceptions import ParsingException
 from defrag.modules.helpers.requests import Req
@@ -113,24 +112,3 @@ async def search_all_bugs(query: BugzillaQueryEntry) -> List[Dict[str, Any]]:
 def register_service():
     service = Service(datetime.now(), store=None)
     Cache.register_service(__MOD_NAME__, service)
-
-
-@app.get("/" + __MOD_NAME__ + "/")
-async def root() -> QueryResponse:
-    return QueryResponse(query="info", results=[
-                         {"module": "Bugzilla", "description": "Get information about bugs on bugzilla.opensuse.org"}])
-
-@app.get("/" + __MOD_NAME__ + "/bug/{bug_id}")
-@Memo_Redis.install_decorator("/" + __MOD_NAME__ + "/bug/")
-async def get_bug(bug_id: int) -> QueryResponse:
-    query = CacheQuery(service="bugs", item_id=bug_id)
-    async with Run(query) as response:
-        return response
-
-
-@app.get("/" + __MOD_NAME__ + "/search/")
-@Memo_Redis.install_decorator("/" + __MOD_NAME__ + "/search/")
-async def search(term: str) -> QueryResponse:
-    query = BugzillaQueryEntry(search_string=term)
-    result = await search_all_bugs(query)
-    return QueryResponse(query=Query(service="bugs"),results_count=len(result),results=result)
