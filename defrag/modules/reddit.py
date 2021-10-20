@@ -1,6 +1,6 @@
 import asyncio
 from asyncio.tasks import Task
-from datetime import datetime
+from datetime import date, datetime
 from dateutil.parser.isoparser import isoparse
 from pottery.deque import RedisDeque
 from typing import Any, Dict, List
@@ -34,22 +34,17 @@ class RedditPostEntry(BaseModel):
 
 
 async def parser(ressource_url: str) -> List[RedditPostEntry]:
-    try:
-        feed = await as_async(feedparser.parse)(ressource_url)
-        parsed = [RedditPostEntry(
-            title=e.title,
-            summary=e.summary,
-            published=e.published,
-            updated=isoparse(e.updated).timestamp(),
-            link=e.link
-        )
-            for e in feed.entries
-        ]
-        print(f"Just parsed {len(parsed)}")
-        return parsed
-    except Exception as error:
-        print(error)
-        return []
+    feed = await as_async(feedparser.parse)(ressource_url)
+    parsed = [RedditPostEntry(
+        title=e.title,
+        summary=e.summary,
+        published=e.published,
+        updated=isoparse(e.updated).timestamp(),
+        link=e.link
+    )
+        for e in feed.entries
+    ]
+    return parsed
 
 
 class RedditStore(StoreWorker, BaseStore):
@@ -62,10 +57,11 @@ class RedditStore(StoreWorker, BaseStore):
         self.logs = Logs()
         self.worker_config = worker_config
 
-    def to_keep(self, items: List[Dict[str, Any]]) -> List[Any]:
-        if not items or not self.container:
+    def to_keep(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        def fresher(its): return (i for i in its if i[self.updated_key] > self.logs.last_refresh)
+        if not items or not self.container or not any(fresher(items)):
             return items
-        return [i for i in items if i[self.updated_key] > self.logs.last_refresh]
+        return list(fresher(items))
 
     def to_evict(self) -> List[Any]:
         return []

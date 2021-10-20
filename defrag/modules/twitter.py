@@ -49,9 +49,10 @@ class TwitterStore(StoreWorker, BaseStore):
         self.worker_config = worker_config
 
     def to_keep(self, items: List[Any]) -> List[Any]:
-        if not items or not self.container:
-            return [i.dict() for i in items]
-        return [i.dict() for i in items if getattr(i, self.updated_key) > self.logs.last_refresh]
+        def fresher(its): return (i for i in its if i[self.updated_key] > self.logs.last_refresh)
+        if not items or not self.container or not any(fresher(items)):
+            return items
+        return list(fresher(items))
 
     def to_evict(self) -> List[Any]:
         return []
@@ -69,7 +70,7 @@ class TwitterStore(StoreWorker, BaseStore):
     async def refresh(self) -> None:
         fetch = as_async(api.GetUserTimeline)
         entries = [TwitterEntry(contents=x.text, created_at_in_seconds=x.created_at_in_seconds, created_at=x.created_at, id_str=x.id_str) for x in await fetch(screen_name="@openSUSE")]
-        sorted_entries = sorted(entries, key=attrgetter("created_at"))
+        sorted_entries = sorted(entries, key=attrgetter(self.updated_key))
         self.update_with([e.dict() for e in sorted_entries])
         self.logs.last_refresh = datetime.now().timestamp()
 
@@ -110,7 +111,7 @@ def register_service():
     service_key = __MOD_NAME__ + "_default"
     worker_config = WorkerCfg(
         True, "https://www.reddit.com/r/openSUSE.rss", 900, 30)
-    container_config = ContainerCfg(service_key)
+    container_config = ContainerCfg(service_key, updated_key="created_at")
     twitter_store = TwitterStore(container_config, worker_config)
     service = Service(datetime.now(), store=twitter_store)
     Cache.register_service(__MOD_NAME__, service)

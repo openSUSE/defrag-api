@@ -121,4 +121,5 @@ class Run:
         
     async def __aexit__(self, *args, **kwargs) -> None:
         if self.cache_miss:
+            print(f"Cache miss triggering update with {len(self.results)} entries.")
             Cache.services[self.query.service].store.update_with(self.results)
