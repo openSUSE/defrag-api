@@ -22,23 +22,10 @@ class Opengm(Client, Message):
             workdir=".",
         )
 
-        self.admins = {chat: {Opengm.OWNER_ID} for chat in Opengm.CHATS}
-
     async def start(self) -> None:
         await super().start()
 
         me = await self.get_me()
-        for chat, admins in self.admins.items():
-            async for admin in self.iter_chat_members(chat, filter="administrators"):
-
-                admins.add(admin.user.id)
 
     async def stop(self, *args: Tuple[Any]) -> None:
         await super().stop()
-
-    def is_admin(self, message: Message) -> bool:
-        user_id = message.from_user.id
-        chat_id = message.chat.id
-        return user_id in self.admins[chat_id]
-
-

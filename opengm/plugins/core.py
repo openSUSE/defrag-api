@@ -3,9 +3,10 @@ import logging
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, CallbackQuery, InlineKeyboardButton
 from opengm.opengm import Opengm, command
-from opengm.utils.chat_status import user_admin
+from opengm.utils.chat_status import user_admin, admins
 from opengm.utils.plugins import HELPABLE, HELPABLE_LOWER, paginate_plugins
 from opengm.utils.commands import get_args
+
 # Do not register this plugin!
 
 LOGGER = logging.getLogger(__name__)
@@ -57,3 +58,19 @@ async def help_button_callback(cl: Client, query: CallbackQuery) -> None:
         next_page = int(next_match.group(1))
         await query.message.reply(HELPTEXT, reply_markup=InlineKeyboardMarkup(paginate_modules(next_page + 1, HELPABLE, "help")))
     await query.answer()
+
+
+@Opengm.on_message(filters.command("reload") & filters.group)
+async def reload_admins(bot: Client, message: Message):
+    # if not message.chat.id in admins:
+    #    admins[message.chat.id] = []
+    chat = message.chat
+    member = await bot.get_chat_member(chat.id, message.from_user.id)
+    if member.status not in ('administrator', 'creator'):
+        await message.reply_text("You need to be an admin to do this!")
+        return
+    list = []
+    async for i in bot.iter_chat_members(message.chat.id, filter="administrators"):
+        list.append(i.user.id)
+    admins[message.chat.id] = list
+    print(admins[message.chat.id])
