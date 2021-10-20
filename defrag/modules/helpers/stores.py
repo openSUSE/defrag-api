@@ -76,22 +76,19 @@ class BaseStore(ABC):
 
     # concrete method for evaluating a query to the cache
 
-    def evaluate(self, query: CacheQuery) -> List[Any]:
-        filtered: Generator[Any, Any, Any]
+    def evaluate(self, query: CacheQuery) -> List[Dict[str, Any]]:
+        filtered: Generator[Dict[str, Any], Any, Any]
         if isinstance(self.container, RedisDeque):
-            filtered = (x for x in self.container if query.filter_pred(
-                x)) if query.filter_pred else (x for x in self.container)
+            filtered = (x for x in self.container if query.filter_pred(x)) if query.filter_pred else (x for x in self.container)
         elif isinstance(self.container, RedisDict):
             if self.item_id:
                 return [self.container[self.item_id]] if self.item_id in self.container else []
-            filtered = (x for x in self.container.values() if query.filter_pred(
-                x)) if query.filter_pred else (x for x in self.container.values())
+            filtered = (x for x in self.container.values() if query.filter_pred(x)) if query.filter_pred else (x for x in self.container.values())
         else:
             raise Exception(
                 f"Cannot evaluate cache query on iterable container of type {type(self.container)}")
-        counted = (x for x in islice(filtered, query.count)
-                   ) if query.count else filtered
-        return sorted(counted, key=lambda item: item[query.sort_on_key], reverse=query.reverse) if query.sort_on_key else sorted(counted, reverse=query.reverse)
+        counted = (x for x in islice(filtered, query.count)) if query.count else filtered
+        return sorted(counted, key=lambda item: item[query.sort_on_key], reverse=query.reverse) if query.sort_on_key else list(counted)
 
     # concrete methods for logging
 

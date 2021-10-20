@@ -7,10 +7,9 @@ from typing import Any, Dict, List
 from operator import attrgetter
 import feedparser
 
-from defrag import app
 from defrag.modules.db.redis import RedisPool
-from defrag.modules.helpers.cache_manager import Cache, Memo_Redis, Run, Service
-from defrag.modules.helpers import CacheQuery, Query, QueryResponse
+from defrag.modules.helpers.cache_manager import Cache, Service
+from defrag.modules.helpers import CacheQuery
 from pydantic.main import BaseModel
 from defrag.modules.helpers.stores import ContainerCfg, Logs, StoreWorker, BaseStore, WorkerCfg
 from defrag.modules.helpers.sync_utils import as_async
@@ -66,7 +65,7 @@ class RedditStore(StoreWorker, BaseStore):
     def to_keep(self, items: List[Dict[str, Any]]) -> List[Any]:
         if not items or not self.container:
             return items
-        return [i for i in items if getattr(i, self.updated_key) > self.logs.last_refresh]
+        return [i for i in items if i[self.updated_key] > self.logs.last_refresh]
 
     def to_evict(self) -> List[Any]:
         return []
@@ -122,18 +121,3 @@ def register_service():
     reddit_store = RedditStore(container_config, worker_config)
     service = Service(datetime.now(), store=reddit_store)
     Cache.register_service(__MOD_NAME__, service)
-
-
-@app.get("/" + __MOD_NAME__ + "/search/")
-@Memo_Redis.install_decorator("/" + __MOD_NAME__ + "/search/")
-async def search(keywords: str) -> QueryResponse:
-    results = await search_reddit(keywords)
-    query = Query(service=__MOD_NAME__)
-    return QueryResponse(query=query, results=results, results_count=len(results))
-
-
-@app.get(f"/{__MOD_NAME__}/")
-async def get_reddit() -> QueryResponse:
-    query = CacheQuery(service=__MOD_NAME__)
-    async with Run(query) as response:
-        return response

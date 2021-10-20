@@ -114,18 +114,3 @@ def register_service():
     twitter_store = TwitterStore(container_config, worker_config)
     service = Service(datetime.now(), store=twitter_store)
     Cache.register_service(__MOD_NAME__, service)
-
-
-@app.get(f"/{__MOD_NAME__}/search/")
-@Memo_Redis.install_decorator("/" + __MOD_NAME__ + "/search/")
-async def search(keywords: str) -> QueryResponse:
-    results = await search_tweets(keywords)
-    query = Query(service=__MOD_NAME__)
-    return QueryResponse(query=query, results=results, results_count=len(results))
-
-
-@app.get(f"/{__MOD_NAME__}/")
-async def get_twitter() -> QueryResponse:
-    query = CacheQuery(service=__MOD_NAME__)
-    async with Run(query) as response:
-        return response

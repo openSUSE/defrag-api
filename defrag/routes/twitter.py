@@ -1,21 +1,23 @@
 from defrag.modules.helpers import QueryResponse, Query, CacheQuery
-from defrag.modules.helpers.services_manager import Run
+from defrag.modules.helpers.cache_manager import Memo_Redis, Run
 from defrag.modules.twitter import search_tweets
 
 from fastapi import APIRouter
 router = APIRouter()
 
 
-""" Twitter """
+__ENDPOINT_NAME__ = "twitter"
 
-
-@router.get("/twitter/")
-async def handle_get_twitter() -> QueryResponse:
-    return await Run.query(CacheQuery(service="twitter", item_key="id_str"))
-
-
-@router.get("twitter/search/")
-async def handle_search_tweets(keywords: str) -> QueryResponse:
+@router.get(f"/{__ENDPOINT_NAME__}/search/")
+@Memo_Redis.install_decorator("/" + __ENDPOINT_NAME__ + "/search/")
+async def search(keywords: str) -> QueryResponse:
     results = await search_tweets(keywords)
-    query = Query(service="twitter")
+    query = Query(service=__ENDPOINT_NAME__)
     return QueryResponse(query=query, results=results, results_count=len(results))
+
+
+@router.get(f"/{__ENDPOINT_NAME__}/")
+async def get_twitter() -> QueryResponse:
+    query = CacheQuery(service=__ENDPOINT_NAME__)
+    async with Run(query) as response:
+        return response
