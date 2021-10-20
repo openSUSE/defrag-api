@@ -34,10 +34,11 @@ else:
         format=LOGFORMAT,
         level=logging.INFO)
 
-LOAD = []
-
 user_env = Path(".env")
 has_env = user_env.is_file() or bool(os.environ.get('ENV', False))
+
+
+LOAD = []
 
 if has_env:
     REDIS_HOST = os.environ.get("REDIS_HOST", None)
@@ -53,7 +54,7 @@ if has_env:
 else:
     config = configparser.ConfigParser()
     config.read("config.ini")
-    REDIS_HOST = config["REDIS"]["REDIS_HOST"] 
+    REDIS_HOST = config["REDIS"]["REDIS_HOST"]
     REDIS_PORT = int(config["REDIS"]["REDIS_PORT"])
     REDIS_PWD = config["REDIS"]["REDIS_PWD"]
     BUGZILLA_USER = config["BUGZILLA"]["BUGZILLA_USER"]
