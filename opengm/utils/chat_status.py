@@ -9,6 +9,7 @@ admins = RedisDict({}, redis=redis, key="chat_admins")
 # {chat_id: [user_id, user_id]}
 
 
+
 def user_admin(func):
     @wraps(func)
     async def is_admin(cl: Client, message: Message, *args, **kwargs):
