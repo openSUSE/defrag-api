@@ -1,28 +1,29 @@
+import asyncio
 from asyncio.tasks import Task
 from datetime import datetime
 from itertools import islice
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 from pottery import RedisDeque, RedisDict
 from defrag.modules.helpers import CacheQuery
 
-# configuration for the cache store (container)
-
 
 @dataclass
 class ContainerCfg:
+    """ Configuration for the cache store (container) """
+
     redis_key: str
     # tags which field is to be used as 'id' field when running queries
     id_key: str = "id"
     # tags which field is to be used as 'last updated' field when running queries
     updated_key: str = "updated"
 
-# logs
-
 
 @dataclass
 class Logs:
+    """ Logs to the cache store"""
+
     logs: List[Dict[str, Any]] = field(default_factory=list)
     last_startup: Optional[float] = None
     last_refresh: Optional[float] = None
@@ -31,11 +32,17 @@ class Logs:
 
 
 class BaseStore(ABC):
+    """
+    Hybrid class declaring instance methods for store self-management
+    and also adding a concrete evaluation instance method.
+    """
 
     container: Any
     item_id: str
     logs: Logs
     container_config: ContainerCfg
+
+    # filtering operations
 
     @abstractmethod
     def to_keep(self, items: List[Any]) -> List[Any]:
@@ -47,7 +54,7 @@ class BaseStore(ABC):
         """ Filters out the items that should be removed from the container """
         pass
 
-    # operations on the cache container
+    # updating operations
 
     @abstractmethod
     def update_with(self, items: List[Any]) -> None:
@@ -69,31 +76,28 @@ class BaseStore(ABC):
         """ Runs some network action to fetch items and use them to refresh the cache. """
         pass
 
-    @abstractmethod
-    def evict(self) -> None:
-        """ Runs the eviction policy on the container. """
-        pass
-
     # concrete method for evaluating a query to the cache
 
     def evaluate(self, query: CacheQuery) -> List[Dict[str, Any]]:
-        filtered: Generator[Dict[str, Any], Any, Any]
+        filtered: Iterable
+
         if isinstance(self.container, RedisDeque):
-            filtered = (x for x in self.container if query.filter_pred(x)) if query.filter_pred else (x for x in self.container)
+            filtered = (x for x in self.container if query.filter_pred(
+                x)) if query.filter_pred else self.container
+        
         elif isinstance(self.container, RedisDict):
             if self.item_id:
                 return [self.container[self.item_id]] if self.item_id in self.container else []
             filtered = (x for x in self.container.values() if query.filter_pred(x)) if query.filter_pred else (x for x in self.container.values())
+        
         else:
             raise Exception(
                 f"Cannot evaluate cache query on iterable container of type {type(self.container)}")
+        
         counted = (x for x in islice(filtered, query.count)) if query.count else filtered
         return sorted(counted, key=lambda item: item[query.sort_on_key], reverse=query.reverse) if query.sort_on_key else list(counted)
 
     # concrete methods for logging
-
-    def repr(self) -> Dict[str, str]:
-        return vars(self)
 
     def get_logs(self) -> Logs:
         return self.logs
@@ -103,23 +107,46 @@ class BaseStore(ABC):
         self.logs.logs.append(message)
 
 
-# configuration for the worker doing the refresh (if any)
-
 @dataclass
 class WorkerCfg:
+    """ Configuration for the worker doing the refreshing (if any). """
     worker: bool
     worker_fetch_endpoint: Optional[str]
     worker_interval: Optional[int]
     worker_timeout: Optional[int]
 
 
-class StoreWorker(ABC):
+class StoreWorkerMixin:
+    """ Mixin for adding "worker-like" (auto-scheduled task) functionality to stores. """
     worker_config: WorkerCfg
+    worker: Optional[Task]
+    logs: Logs
+    log_with: Callable
+    refresh: Callable
 
-    @abstractmethod
     def create_worker(self) -> Task:
-        """
-        Returns a handler to an asyncio task that can be stored and cancelled. The
-        task is to refresh the cache and to apply the eviction policy.
-        """
-        pass
+        async def run():
+            if not self.worker_config.worker_interval:
+                raise Exception(
+                    "Tried to create a worker from TwitterStore, but no worker_config.worker interval set.")
+            await asyncio.sleep(self.worker_config.worker_interval)
+            try:
+                await asyncio.wait_for(self.refresh(), timeout=self.worker_config.worker_timeout)
+                self.logs.last_worker_run = datetime.now().timestamp()
+            except asyncio.exceptions.TimeoutError:
+                self.log_with(
+                    {"msg": f"timedout after {self.worker_config.worker_timeout} seconds."})
+            finally:
+                await run()
+        return asyncio.create_task(run())
+
+    async def destroy_worker(self) -> None:
+        if not self.worker:
+            raise Exception(
+                "TwitterStore cannot destroy a worker that does not exist yet.")
+        self.worker.cancel()
+        try:
+            await self.worker
+        except asyncio.CancelledError:
+            delattr(self, "worker")
+            print("Successfully cancelled & destroyed worker for TwitterStore.")

@@ -56,9 +56,12 @@ class RedditStore(StoreWorker, BaseStore):
         self.updated_key = container_config.updated_key
         self.logs = Logs()
         self.worker_config = worker_config
+        if worker_config.worker:
+            self.worker = self.create_worker()
 
     def to_keep(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        def fresher(its): return (i for i in its if i[self.updated_key] > self.logs.last_refresh)
+        def fresher(its): return (
+            i for i in its if i[self.updated_key] > self.logs.last_refresh)
         if not items or not self.container or not any(fresher(items)):
             return items
         return list(fresher(items))
@@ -84,25 +87,6 @@ class RedditStore(StoreWorker, BaseStore):
         sorted_entries = sorted(entries, key=attrgetter(self.updated_key))
         self.update_with([e.dict() for e in sorted_entries])
         self.logs.last_refresh = datetime.now().timestamp()
-
-    def evict(self) -> None:
-        pass
-
-    def create_worker(self) -> Task:
-        async def run():
-            if not self.worker_config.worker_interval:
-                raise Exception(
-                    "Tried to create a worker from RedditStore, but no worker_config.worker interval set.")
-            await asyncio.sleep(self.worker_config.worker_interval)
-            try:
-                await asyncio.wait_for(self.refresh(), timeout=self.worker_config.worker_timeout)
-                self.logs.last_worker_run = datetime.now().timestamp()
-            except asyncio.exceptions.TimeoutError:
-                self.log_with(
-                    {"msg": f"timedout after {self.worker_config.worker_timeout} seconds."})
-            finally:
-                await run()
-        return asyncio.create_task(run())
 
 
 async def search_reddit(keywords: str) -> List[RedditPostEntry]:

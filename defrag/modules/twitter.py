@@ -47,6 +47,8 @@ class TwitterStore(StoreWorker, BaseStore):
         self.updated_key = container_config.updated_key
         self.logs = Logs()
         self.worker_config = worker_config
+        if self.worker_config.worker:
+            self.worker = self.create_worker()
 
     def to_keep(self, items: List[Any]) -> List[Any]:
         def fresher(its): return (i for i in its if i[self.updated_key] > self.logs.last_refresh)
@@ -77,22 +79,6 @@ class TwitterStore(StoreWorker, BaseStore):
     def evict(self) -> None:
         pass
 
-    def create_worker(self) -> Task:
-        async def run():
-            if not self.worker_config.worker_interval:
-                raise Exception(
-                    "Tried to create a worker from RedditStore, but no worker_config.worker interval set.")
-            await asyncio.sleep(self.worker_config.worker_interval)
-            try:
-                await asyncio.wait_for(self.refresh(), timeout=self.worker_config.worker_timeout)
-                self.logs.last_worker_run = datetime.now().timestamp()
-            except asyncio.exceptions.TimeoutError:
-                self.log_with(
-                    {"msg": f"timedout after {self.worker_config.worker_timeout} seconds."})
-            finally:
-                await run()
-        return asyncio.create_task(run())
-
 
 async def search_tweets(keywords: str) -> List[TwitterEntry]:
     try:
@@ -106,11 +92,8 @@ async def search_tweets(keywords: str) -> List[TwitterEntry]:
 
 
 def register_service():
-    name = "twitter"
-    service_key = name + "_default"
     service_key = __MOD_NAME__ + "_default"
-    worker_config = WorkerCfg(
-        True, "https://www.reddit.com/r/openSUSE.rss", 900, 30)
+    worker_config = WorkerCfg(True, None, 900, 30)
     container_config = ContainerCfg(service_key, updated_key="created_at")
     twitter_store = TwitterStore(container_config, worker_config)
     service = Service(datetime.now(), store=twitter_store)
