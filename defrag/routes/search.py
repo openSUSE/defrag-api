@@ -1,16 +1,16 @@
 from defrag.modules.helpers import Query, QueryResponse
+from defrag.modules.helpers.cache_manager import Memo_Redis
 from defrag.modules.search import SearchQuery, search_map
 import asyncio
 
 from fastapi import APIRouter
 router = APIRouter()
 
-""" Search (merged) """
-
-__MODULE_NAME__ = "search"
+__ENDPOINT_NAME__ = "search"
 
 
-@router.get("/search/")
+@router.get(f"/{__ENDPOINT_NAME__}/")
+@Memo_Redis.install_decorator(f"/{__ENDPOINT_NAME__}/")
 async def handle_global_search(keywords: str, scope: str) -> QueryResponse:
     query = Query(service="search")
     sq = SearchQuery(keywords=keywords, scope=[

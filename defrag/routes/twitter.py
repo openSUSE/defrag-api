@@ -9,7 +9,7 @@ router = APIRouter()
 __ENDPOINT_NAME__ = "twitter"
 
 @router.get(f"/{__ENDPOINT_NAME__}/search/")
-@Memo_Redis.install_decorator("/" + __ENDPOINT_NAME__ + "/search/")
+@Memo_Redis.install_decorator(f"/{__ENDPOINT_NAME__}/search/")
 async def search(keywords: str) -> QueryResponse:
     results = await search_tweets(keywords)
     query = Query(service=__ENDPOINT_NAME__)
