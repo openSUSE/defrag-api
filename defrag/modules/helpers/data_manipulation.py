@@ -84,7 +84,7 @@ def find_first(it: Iterable, relation: Callable[[Any, Any], bool], origin: Any) 
     return -1
 
 
-def filter_sort_count(
+def filter_count_sort(
     it: Iterable[Any],
     filter_pred: Optional[Callable[[Any], bool]] = None,
     count: Optional[int] = None,

@@ -1,7 +1,6 @@
-from functools import partial
 from defrag.modules.helpers import CacheQuery, Query, QueryResponse
 from defrag.modules.helpers.cache_manager import Memo_Redis, Run
-from defrag.modules.bugs import get_this_bug, BugzillaQueryEntry, search_all_bugs
+from defrag.modules.bugs import BugzillaQueryEntry, search_all_bugs
 
 from fastapi import APIRouter
 router = APIRouter()

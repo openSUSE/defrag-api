@@ -1,6 +1,6 @@
 import asyncio
 from asyncio.tasks import Task
-from datetime import date, datetime
+from datetime import datetime
 from dateutil.parser.isoparser import isoparse
 from pottery.deque import RedisDeque
 from typing import Any, Dict, List

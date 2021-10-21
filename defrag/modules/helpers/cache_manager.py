@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from functools import wraps
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional
 from collections import UserDict
 
 from pottery import RedisDict

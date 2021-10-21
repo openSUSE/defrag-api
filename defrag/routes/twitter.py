@@ -1,5 +1,5 @@
-from defrag.modules.helpers import QueryResponse, Query, CacheQuery
-from defrag.modules.helpers.cache_manager import Memo_Redis, Run
+from defrag.modules.helpers import QueryResponse, Query
+from defrag.modules.helpers.cache_manager import Memo_Redis, Run, CacheQuery
 from defrag.modules.twitter import search_tweets
 
 from fastapi import APIRouter

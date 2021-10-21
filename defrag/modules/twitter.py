@@ -8,9 +8,9 @@ from operator import attrgetter
 from datetime import datetime
 from pydantic.main import BaseModel
 from defrag.modules.db.redis import RedisPool
-from defrag.modules.helpers import CacheQuery, Query, QueryResponse
-from defrag import LOGGER, app, TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET
-from defrag.modules.helpers.cache_manager import Cache, Memo_Redis, Service
+from defrag.modules.helpers import CacheQuery
+from defrag import LOGGER, TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET
+from defrag.modules.helpers.cache_manager import Cache, Service
 from defrag.modules.helpers.stores import BaseStore, ContainerCfg, Logs, StoreWorker, WorkerCfg
 from defrag.modules.helpers.sync_utils import as_async
 from defrag.modules.helpers.cache_manager import Run
