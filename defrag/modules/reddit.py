@@ -11,7 +11,7 @@ from defrag.modules.db.redis import RedisPool
 from defrag.modules.helpers.cache_manager import Cache, Service
 from defrag.modules.helpers import CacheQuery
 from pydantic.main import BaseModel
-from defrag.modules.helpers.stores import ContainerCfg, Logs, StoreWorker, BaseStore, WorkerCfg
+from defrag.modules.helpers.stores import ContainerCfg, Logs, StoreWorkerMixin, BaseStore, WorkerCfg
 from defrag.modules.helpers.sync_utils import as_async
 
 """ INFO
@@ -47,7 +47,7 @@ async def parser(ressource_url: str) -> List[RedditPostEntry]:
     return parsed
 
 
-class RedditStore(StoreWorker, BaseStore):
+class RedditStore(StoreWorkerMixin, BaseStore):
 
     def __init__(self, container_config: ContainerCfg, worker_config: WorkerCfg) -> None:
         self.container: RedisDeque = RedisDeque(

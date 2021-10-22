@@ -11,7 +11,7 @@ from defrag.modules.db.redis import RedisPool
 from defrag.modules.helpers import CacheQuery
 from defrag import LOGGER, TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET
 from defrag.modules.helpers.cache_manager import Cache, Service
-from defrag.modules.helpers.stores import BaseStore, ContainerCfg, Logs, StoreWorker, WorkerCfg
+from defrag.modules.helpers.stores import BaseStore, ContainerCfg, Logs, StoreWorkerMixin, WorkerCfg
 from defrag.modules.helpers.sync_utils import as_async
 from defrag.modules.helpers.cache_manager import Run
 
@@ -38,7 +38,7 @@ class TwitterEntry(BaseModel):
     id_str: str
 
 
-class TwitterStore(StoreWorker, BaseStore):
+class TwitterStore(StoreWorkerMixin, BaseStore):
 
     def __init__(self, container_config: ContainerCfg, worker_config: WorkerCfg) -> None:
         self.container: RedisDeque = RedisDeque(
