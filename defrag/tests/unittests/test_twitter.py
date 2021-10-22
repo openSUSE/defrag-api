@@ -1,10 +1,18 @@
+from defrag.modules.db.redis import RedisPool
 from defrag.modules.twitter import register_service, search_tweets
 from fastapi.testclient import TestClient
 from defrag.routes import app
 import pytest
 
 client = TestClient(app)
-register_service()
+
+
+@pytest.mark.asyncio
+async def test_init():
+    with RedisPool() as conn:
+        conn.flushall()
+    register_service()
+
 
 @pytest.mark.asyncio
 async def test_search():

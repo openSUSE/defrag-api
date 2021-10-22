@@ -51,10 +51,10 @@ class TwitterStore(StoreWorkerMixin, BaseStore):
             self.worker = asyncio.create_task(self.create_worker())
 
 
-    def to_keep(self, items: List[Any]) -> List[Any]:
-        def fresher(its): return (i for i in its if i[self.updated_key] > self.logs.last_refresh)
+    def to_keep(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        fresher = lambda it: (i for i in it if i[self.updated_key] > self.logs.last_refresh)
         if not items or not self.container or not any(fresher(items)):
-            return items
+            return list(items)
         return list(fresher(items))
 
     def to_evict(self) -> List[Any]:
@@ -95,7 +95,7 @@ async def search_tweets(keywords: str) -> List[TwitterEntry]:
 def register_service():
     service_key = __MOD_NAME__ + "_default"
     worker_config = WorkerCfg(True, None, 900, 30)
-    container_config = ContainerCfg(service_key, updated_key="created_at")
+    container_config = ContainerCfg(service_key, updated_key="created_at_in_seconds")
     twitter_store = TwitterStore(container_config, worker_config)
     service = Service(datetime.now(), store=twitter_store)
     Cache.register_service(__MOD_NAME__, service)
