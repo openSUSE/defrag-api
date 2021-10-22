@@ -1,5 +1,5 @@
 from collections import deque
-from defrag.modules.helpers.data_manipulation import compose, find_first, make_xform, make_transducer, base_step, dropwhile_takeif
+from defrag.modules.helpers.data_manipulation import compose, find_first, make_xform, make_transducer, base_step, filter_count_sort
 from random import randint
 
 def test_compose():
@@ -31,7 +31,7 @@ def test_make_transducer():
 
     xform = make_xform(to_str, low3, inc1)
     transducer = make_transducer(xform, base_step, [])
-    res = transducer([0, 1, 2])
+    res = transducer([0, 1, 2, 3, 4])
     assert res == ["1", "2"]
 
 
@@ -58,10 +58,7 @@ def test_find_first():
     d2 = len(large)
     assert d1 == d2-1  
 
-def test_dropwhile_takeif():
+def test_filter_count_sort():
     l = [1,2,3,4,5,6,7,8,9,10]
-    origin = 4
-    dc = lambda x: x < origin
-    tc = lambda x: x % 2 == 0
-    assert list(dropwhile_takeif(l, dc, tc)) == [4,6,8,10]
+    assert filter_count_sort(l, lambda x: x > 5, 4, reverse=True) == [9,8,7,6]
 

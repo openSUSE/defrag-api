@@ -73,8 +73,7 @@ async def search_bugs_with_term(term: str) -> List[int]:
                 bz_result_count = soup.find(
                     "span", {"class": "bz_result_count"})
                 result = []
-                if bz_result_count.find("span",
-                                        {"class": "zero_results"}) is None:
+                if bz_result_count.find("span",{"class": "zero_results"}) is None:
                     bz_buglist = soup.find(
                         "table", {
                             "class": "bz_buglist"}).findAll(
@@ -98,14 +97,10 @@ async def search_all_bugs(query: BugzillaQueryEntry) -> List[Dict[str, Any]]:
     bugs_ids = await search_bugs_with_term(query.search_string)
     if not bugs_ids:
         return []
-    results = []
-    # careful, apparently if we launch all coroutines concurrently or remove the limit, the
-    # server denies us!
-    for res in asyncio.as_completed(
-            [get_this_bug(bug_id) for n, bug_id in enumerate(bugs_ids) if n < 26]):
-        model = await res
-        results.append({**model.dict(exclude_unset=True),
-                       **model.dict(exclude_none=True)})
+    results = [
+        { **model.dict(exclude_unset=True),**model.dict(exclude_none=True) }
+        for model in await asyncio.gather(*[get_this_bug(bug_id) for n, bug_id in enumerate(bugs_ids) if n < 26])
+    ]
     return results
 
 

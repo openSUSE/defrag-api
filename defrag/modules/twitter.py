@@ -48,7 +48,8 @@ class TwitterStore(StoreWorkerMixin, BaseStore):
         self.logs = Logs()
         self.worker_config = worker_config
         if self.worker_config.worker:
-            self.worker = self.create_worker()
+            self.worker = asyncio.create_task(self.create_worker())
+
 
     def to_keep(self, items: List[Any]) -> List[Any]:
         def fresher(its): return (i for i in its if i[self.updated_key] > self.logs.last_refresh)

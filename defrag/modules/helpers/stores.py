@@ -1,5 +1,5 @@
 import asyncio
-from asyncio.tasks import Task
+from asyncio.tasks import Task, create_task
 from datetime import datetime
 from itertools import islice
 from typing import Any, Callable, Dict, Iterable, List, Optional
@@ -124,21 +124,19 @@ class StoreWorkerMixin:
     log_with: Callable
     refresh: Callable
 
-    def create_worker(self) -> Task:
-        async def run():
-            if not self.worker_config.worker_interval:
-                raise Exception(
-                    "Tried to create a worker from TwitterStore, but no worker_config.worker interval set.")
-            await asyncio.sleep(self.worker_config.worker_interval)
-            try:
-                await asyncio.wait_for(self.refresh(), timeout=self.worker_config.worker_timeout)
-                self.logs.last_worker_run = datetime.now().timestamp()
-            except asyncio.exceptions.TimeoutError:
-                self.log_with(
-                    {"msg": f"timedout after {self.worker_config.worker_timeout} seconds."})
-            finally:
-                await run()
-        return asyncio.create_task(run())
+    async def create_worker(self) -> None:
+        if not self.worker_config.worker_interval:
+            raise Exception(
+                "Tried to create a worker from TwitterStore, but no worker_config.worker interval set.")
+        await asyncio.sleep(self.worker_config.worker_interval)
+        try:
+            await asyncio.wait_for(self.refresh(), timeout=self.worker_config.worker_timeout)
+            self.logs.last_worker_run = datetime.now().timestamp()
+        except asyncio.exceptions.TimeoutError:
+            self.log_with(
+                {"msg": f"timedout after {self.worker_config.worker_timeout} seconds."})
+        finally:
+            await self.create_worker()
 
     async def destroy_worker(self) -> None:
         if not self.worker:

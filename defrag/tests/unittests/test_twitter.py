@@ -1,17 +1,10 @@
-from defrag.modules.twitter import TwitterStore, register_service, search_tweets
+from defrag.modules.twitter import register_service, search_tweets
 from fastapi.testclient import TestClient
-from defrag import app
+from defrag.routes import app
 import pytest
 
 client = TestClient(app)
 register_service()
-
-
-@pytest.mark.asyncio
-async def test_get_twitter():
-    res = await TwitterStore.fetch_items()
-    assert res
-
 
 @pytest.mark.asyncio
 async def test_search():

@@ -57,7 +57,7 @@ class RedditStore(StoreWorkerMixin, BaseStore):
         self.logs = Logs()
         self.worker_config = worker_config
         if worker_config.worker:
-            self.worker = self.create_worker()
+            self.worker = asyncio.create_task(self.create_worker())
 
     def to_keep(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         def fresher(its): return (

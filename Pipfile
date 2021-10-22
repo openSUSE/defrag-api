@@ -14,6 +14,10 @@ python-dateutil = "*"
 feedparser = "*"
 python-twitter = "*"
 uvicorn = {extras = ["standard"], version = "*"}
+pytest = "*"
+pytest-asyncio = "*"
+lxml = "*"
+autopep8 = "*"
 
 [dev-packages]
 

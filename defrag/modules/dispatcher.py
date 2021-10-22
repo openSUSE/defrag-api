@@ -7,7 +7,7 @@ from defrag.modules.helpers.requests import Req
 from defrag.modules.helpers.sync_utils import as_async, run_redis_jobs
 from pottery import RedisSet, RedisDict, RedisDeque
 from pydantic import BaseModel
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 import asyncio
 
 __MODULE_NAME__ = "dispatcher"
@@ -37,16 +37,17 @@ class TelegramNotification(Notification):
 class Dispatchable(BaseModel):
     origin: str
     notification: Notification
+    id: Optional[int] = None
     retries: int = 0
     schedules: List[float] = []
-    id: Optional[str] = None
 
 
 class HashedDispatchable(Dispatchable):
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.id = super().id or str(abs(hash(str(self.notification))))
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not hasattr(super(), "id") or not super().id:
+            self.id = hash(datetime.now().timestamp())
         self.schedules = sorted(self.schedules, reverse=True)
 
 class Dispatcher:
@@ -109,7 +110,7 @@ class Dispatcher:
         item = HashedDispatchable(
             **dispatchable.dict()
         ).dict() if isinstance(dispatchable, Dispatchable) else dispatchable
-        if not "id" in item:
+        if not "id" in item or not item['id']:
             raise Exception("Cannot process items without id!")
         await cls.process_q.put(item)
 
@@ -229,9 +230,9 @@ class Dispatcher:
             return list(cls.due_for_polling_notifications)
 
         pred = lambda item: item["notification"]["dispatched"] > cls.due_last_poll
-        slice = (e for e in cls.due_for_polling_notifications if pred(e))
-        redis_jobs = [cls.due_for_polling_notifications.pop() for _ in slice]
-        await as_async(run_redis_jobs)(redis_jobs)
+        slice = [e for e in cls.due_for_polling_notifications if pred(e)]
+        removing_all_due = (cls.due_for_polling_notifications.pop for _ in slice)
+        await as_async(run_redis_jobs)(removing_all_due)
         cls.due_last_poll = datetime.now().timestamp()
         return list(slice)
 
