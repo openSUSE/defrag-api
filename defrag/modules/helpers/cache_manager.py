@@ -80,9 +80,12 @@ class Memo_Redis:
 
     @staticmethod
     def install_decorator(redict_key: str):
+        
         if not redict_key in Memo_Redis.redicts:
             Memo_Redis.redicts[redict_key] = RedisDict(redis=RedisPool().connection, key=redict_key)
+        
         def decorator (f: Callable) -> Callable:
+            
             @wraps(f)
             async def inner(*args, **kwargs):
                 func_call_key = hash(str(f.__name__) + str(args) + str (kwargs))
@@ -92,6 +95,7 @@ class Memo_Redis:
                 Memo_Redis.redicts[redict_key][func_call_key] = res.dict()
                 return res
             return inner
+            
         return decorator
 
 
