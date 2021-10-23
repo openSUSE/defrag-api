@@ -1,12 +1,12 @@
 import asyncio
-from defrag.modules.helpers.requests import Req
+from defrag.modules.helpers.requests import Session
 import pytest
 
 
 async def go(i: int):
-    async with Req("https://opensuse-docs-bot.herokuapp.com/stats") as resp:
-        await asyncio.sleep(100e-3)
-        return i
+    await Session().get("https://opensuse-docs-bot.herokuapp.com/stats")
+    await asyncio.sleep(100e-3)
+    return i
 
 
 @pytest.mark.asyncio

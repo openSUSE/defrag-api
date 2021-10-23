@@ -3,7 +3,7 @@ from asyncio.tasks import Task, wait_for
 from datetime import datetime
 from defrag import LOGGER
 from defrag.modules.db.redis import RedisPool
-from defrag.modules.helpers.requests import Req
+from defrag.modules.helpers.requests import Session
 from defrag.modules.helpers.sync_utils import as_async, run_redis_jobs
 from pottery import RedisSet, RedisDict, RedisDeque
 from pydantic import BaseModel
@@ -241,8 +241,8 @@ class Dispatcher:
         """ Sends a dispatched dispatchable to its final destination. """
         if not testing:
             if data := item["requests_options"]["data"]:
-                async with Req(item["requests_options"]["url"], json=data) as response:
-                    return {"status": response.status, "item": item}
+                response = await Session().get(item["requests_options"]["url"], json=data)
+                return {"status": response.status, "item": item}
         return {"status_code": 200, "item": item}
 
     @staticmethod

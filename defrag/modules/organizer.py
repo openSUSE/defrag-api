@@ -10,7 +10,7 @@ from pottery import RedisDict
 from typing import Any, Dict, List, Optional, Tuple
 from dateutil import rrule
 from pydantic.main import BaseModel
-from defrag.modules.helpers.requests import Req
+from defrag.modules.helpers.requests import Session
 
 __MOD_NAME__ = "organizer"
 
@@ -312,9 +312,9 @@ class Calendar:
         now = datetime.now()
         start, _ = disassemble_to_date_time(datetime.now())
         end, _ = disassemble_to_date_time(now + (interval or POLL_INTERVAL))
-        async with Req(FEDOCAL_URL, params={"start": start, "end": end}) as response:
-            res = await response.json()
-            return [FedocalEvent(**entry) for entry in res["events"]]
+        response = await Session().get(FEDOCAL_URL, params={"start": start, "end": end})
+        res = await response.json()
+        return [FedocalEvent(**entry) for entry in res["events"]]
 
     @staticmethod
     async def set_reminders_from_fedocal(events: List[FedocalEvent], user_deltas: Reminders.UserDeltas) -> EitherErrorOrOk:

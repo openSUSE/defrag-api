@@ -1,5 +1,5 @@
 from pydantic.main import BaseModel
-from defrag.modules.helpers.requests import Req
+from defrag.modules.helpers.requests import Session
 from typing import List
 from dateutil import parser
 
@@ -39,10 +39,8 @@ async def search_wikis_as_list(keywords: str) -> List[WikiListEntry]:
 
 
 async def search_wikis_as_gen(keywords: str) -> List[WikiGenEntry]:
-    async with Req("https://en.opensuse.org/api.php", params={"action": "query", "generator": "search", "gsrsearch": keywords, "gsrlimit": "75", "gsrwhat": "text", "gsort": "relevance", "format": "json"}) as response:
-        if results_json := await response.json():
-            return [WikiGenEntry(title=i["title"], page_id=i["pageid"], index=i["index"])
-                    for i in results_json["query"]["pages"].values()]
-        return []
-
-
+    response = await Session().get("https://en.opensuse.org/api.php", params={"action": "query", "generator": "search", "gsrsearch": keywords, "gsrlimit": "75", "gsrwhat": "text", "gsort": "relevance", "format": "json"})
+    if results_json := await response.json():
+        return [WikiGenEntry(title=i["title"], page_id=i["pageid"], index=i["index"])
+            for i in results_json["query"]["pages"].values()]
+    return []

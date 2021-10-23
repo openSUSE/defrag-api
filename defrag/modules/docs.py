@@ -1,6 +1,6 @@
 from datetime import datetime
 from defrag.modules.helpers.cache_manager import Cache, Service
-from defrag.modules.helpers.requests import Req
+from defrag.modules.helpers.requests import Session
 from lunr import lunr
 from lunr.index import Index
 from bs4 import BeautifulSoup
@@ -35,10 +35,10 @@ indexes = {
 
 
 async def get_data(source: str) -> Any:
-    async with Req(indexes[source]["url"]) as result:
-        if source == "tumbleweed":
-            return await result.read()
-        return await result.text()
+    result = await Session().get(indexes[source]["url"])
+    if source == "tumbleweed":
+        return await result.read()
+    return await result.text()
 
 
 def make_soup(data_str: str) -> List[LunrDoc]:
