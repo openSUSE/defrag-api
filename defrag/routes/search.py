@@ -9,7 +9,7 @@ router = APIRouter()
 __ENDPOINT_NAME__ = "search"
 
 
-@router.get(f"/{__ENDPOINT_NAME__}/")
+@router.get("/{__ENDPOINT_NAME__}/")
 @Memo_Redis.install_decorator(f"/{__ENDPOINT_NAME__}/")
 async def handle_global_search(keywords: str, scope: str) -> QueryResponse:
     query = Query(service="search")

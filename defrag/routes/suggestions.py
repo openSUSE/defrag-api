@@ -9,7 +9,7 @@ router = APIRouter()
 __ENDPOINT_NAME__ = "suggestions"
 
 
-@router.get(f"/{__ENDPOINT_NAME__}/")
+@router.get("/{__ENDPOINT_NAME__}/")
 async def get_suggestions(key: Optional[str] = None) -> QueryResponse:
     query = Query(service="suggestions")
     results = await Suggestions.view(key)
@@ -18,7 +18,7 @@ async def get_suggestions(key: Optional[str] = None) -> QueryResponse:
     return QueryResponse(query=query, error=str(ok))
 
 
-@router.post(f"/{__ENDPOINT_NAME__}/create/")
+@router.post("/{__ENDPOINT_NAME__}/create/")
 async def create_suggestion(sugg: Suggestions.New) -> QueryResponse:
     query = Query(service="suggestions")
     result = await Suggestions.add(sugg)
@@ -27,7 +27,7 @@ async def create_suggestion(sugg: Suggestions.New) -> QueryResponse:
     return QueryResponse(query=query, error="Didn't turn out the way we anticipated!")
 
 
-@router.post(f"/{__ENDPOINT_NAME__}/vote_for_suggestion/")
+@router.post("/{__ENDPOINT_NAME__}/vote_for_suggestion/")
 async def vote_for_suggestion(voter_id: str, sugg_id: str, vote: int) -> QueryResponse:
     query = Query(service="suggestions")
     result = await Suggestions.cast_vote(voter_id=voter_id, key=sugg_id, vote=vote)

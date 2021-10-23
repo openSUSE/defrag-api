@@ -9,7 +9,7 @@ router = APIRouter()
 __ENDPOINT_NAME__ = "wiki"
 
 
-@router.get(f"/{__ENDPOINT_NAME__}/search/")
+@router.get("/{__ENDPOINT_NAME__}/search/")
 @Memo_Redis.install_decorator(f"/{__ENDPOINT_NAME__}/search/")
 async def handle_search_wikis(keywords: str) -> QueryResponse:
     results = await search_wikis_as_list(keywords)
