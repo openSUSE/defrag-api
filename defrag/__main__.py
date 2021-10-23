@@ -38,7 +38,7 @@ async def register_modules_as_services(included: List[str] = ["search"]) -> None
     for module_name in (m for m in ALL_MODULES if m in included):
         imported_module = importlib.import_module("defrag.modules." + module_name)
         if hasattr(imported_module, "register_service"):
-            imported_module.register_service
+            imported_module.register_service()
             LOGGER.debug(f"Registered {module_name} as service.")
         
 
