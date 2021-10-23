@@ -15,7 +15,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 from typing import List
-from defrag.modules.helpers.requests import Req
+from defrag.modules.helpers.requests import Session
 from defrag.modules.db.redis import RedisPool
 from defrag import app, LOGGER
 from defrag.modules import ALL_MODULES
@@ -44,7 +44,7 @@ async def register_modules_as_services(included: List[str] = ["search"]) -> None
 
 @app.on_event("shutdown")
 async def close_session() -> None:
-    await Req.close_session()
+    await Session.close()
 
 
 @app.get("/docs", include_in_schema=False)

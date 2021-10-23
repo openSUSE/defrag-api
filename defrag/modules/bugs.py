@@ -10,7 +10,7 @@ from defrag.modules.helpers.cache_manager import Cache, Service
 from defrag import BUGZILLA_USER, BUGZILLA_PASSWORD
 from defrag.modules.helpers.sync_utils import as_async
 from defrag.modules.helpers.exceptions import ParsingException
-from defrag.modules.helpers.requests import Req
+from defrag.modules.helpers.requests import Session
 from bs4 import BeautifulSoup
 
 __MOD_NAME__ = "bugs"
@@ -66,7 +66,9 @@ async def get_this_bug(bug_id: int) -> BugzillaQueryEntry:
 
 async def search_bugs_with_term(term: str) -> List[int]:
     try:
-        async with Req(f"https://bugzilla.opensuse.org/buglist.cgi?quicksearch={term}") as response:
+        client = Session()
+        ok = client.get()
+        async with Session.get(f"https://bugzilla.opensuse.org/buglist.cgi?quicksearch={term}") as response:
             if response.status == 200:
                 text = await response.text()
                 soup = BeautifulSoup(text, "lxml")
