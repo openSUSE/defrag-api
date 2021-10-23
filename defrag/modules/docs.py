@@ -1,5 +1,4 @@
 from datetime import datetime
-from defrag import app
 from defrag.modules.helpers.cache_manager import Cache, Service
 from defrag.modules.helpers.requests import Req
 from lunr import lunr
@@ -7,12 +6,11 @@ from lunr.index import Index
 from bs4 import BeautifulSoup
 from pydantic import BaseModel
 from concurrent.futures import ProcessPoolExecutor
+from typing import Any, Dict, List, Tuple
+
 import asyncio
 import json
 import sys
-from typing import Any, Dict, List, Tuple
-
-from defrag.modules.helpers.stores import ContainerCfg, WorkerCfg
 
 __MOD_NAME__ = "documentation"
 
@@ -90,37 +88,26 @@ def set_global_index(source: str, idx: Index) -> None:
     indexes[source]["index"] = idx
 
 
+async def create_indexes_in_parallel() -> Tuple[Index, Index]:
+    leap_data, tw_data = await asyncio.gather(get_data("leap"), get_data("tumbleweed"))
+    sys.setrecursionlimit(0x100000)
+    with ProcessPoolExecutor(max_workers=2) as executor:
+        leap_worker = executor.submit(make_leap_index, leap_data)
+        tw_worker = executor.submit(make_tumbleweed_index, tw_data)
+        return leap_worker.result(), tw_worker.result()
+
+
+async def set_indexes() -> None:
+    leap, tw = await create_indexes_in_parallel()
+    set_global_index("leap", leap)
+    set_global_index("tumbleweed", tw)
+
+
 def ready_to_index(sources: List[str]) -> bool:
     for s in sources:
         if not indexes[s]["index"]:
             return False
     return True
-
-
-def make_index_search_leap(leap_data: str, keywords: str) -> Tuple[Index, List[Dict[str, Any]]]:
-    idx = make_leap_index(leap_data)
-    return idx, search_index(idx, "leap", keywords)
-
-
-def make_index_search_tumbleweed(tw_data: bytes, keywords: str) -> Tuple[Index, List[Dict[str, Any]]]:
-    idx = make_tumbleweed_index(tw_data)
-    return idx, search_index(idx, "tumbleweed", keywords)
-
-
-async def make_search_set_indexes_in_parallel(keywords: str) -> List[Dict[str, Any]]:
-
-    leap, tw = await asyncio.gather(get_data("leap"), get_data("tumbleweed"))
-    sys.setrecursionlimit(0x100000)
-    with ProcessPoolExecutor(max_workers=2) as executor:
-        leap_worker = executor.submit(
-            make_index_search_leap, **{"leap_data": leap, "keywords": keywords})
-        tw_worker = executor.submit(
-            make_index_search_tumbleweed, **{"tw_data": tw, "keywords": keywords})
-        leap_index, leap_results = leap_worker.result()
-        tw_index, tw_results = tw_worker.result()
-        set_global_index("leap", leap_index)
-        set_global_index("tumbleweed", tw_index)
-        return leap_results + tw_results
 
 
 def search_indexes_in_parallel(keywords: str) -> List[Dict[str, Any]]:
@@ -131,6 +118,8 @@ def search_indexes_in_parallel(keywords: str) -> List[Dict[str, Any]]:
             search_index, **{"idx": indexes["tumbleweed"]["index"], "source": "tumbleweed", "keywords": keywords})
         return leap_worker.result() + tw_worker.result()
 
+
 def register_service():
-    asyncio.create_task(make_search_set_indexes_in_parallel(""))
-    Cache.register_service(__MOD_NAME__, Service(datetime.now(), None, True, True))
+    asyncio.create_task(set_indexes())
+    Cache.register_service(__MOD_NAME__, Service(
+        datetime.now(), None, True, True))

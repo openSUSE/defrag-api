@@ -76,7 +76,7 @@ class Rrule(BaseModel):
 
 class CustomEvent(BaseModel):
 
-    id: str
+    id: int
     title: str
     manager: str # as datetime.strftime with "%Y-%m-%d%H:%M:%S" from datetime.now(timezone.utc)
     creator: str
@@ -226,7 +226,7 @@ class Calendar:
     container = RedisDict({}, redis=RedisPool().connection,
                           key=CAL_NAME)
     # maps str hashes into datetimes for quicker access
-    viewer: Dict[str, datetime] = {}
+    viewer: Dict[int, datetime] = {}
 
     @classmethod
     async def add(cls, _event: CustomEvent, notification: Notification, deltas: Reminders.UserDeltas) -> EitherErrorOrOk:
@@ -328,7 +328,7 @@ class Calendar:
 
     @staticmethod
     def prime_event(event: CustomEvent) -> CustomEvent:
-        event.id = str(abs(hash(event.creator + event.start + event.end)))
+        event.id = abs(hash(event.creator + event.start + event.end))
         event.changelog = [{"created": datetime.now().strftime(FORMAT)}]
         return event
 
