@@ -10,7 +10,7 @@ router = APIRouter()
 __ENDPOINT_NAME__ = "organizer"
 
 
-@router.post("/{__ENDPOINT_NAME__}/add_reminder/")
+@router.post("/" + __ENDPOINT_NAME__ +"/add_reminder/")
 async def add_reminders(reminder: Reminders) -> QueryResponse:
     query = Query(service="organizer")
     if not reminder.tgt:
@@ -19,7 +19,7 @@ async def add_reminders(reminder: Reminders) -> QueryResponse:
     return QueryResponse(query=Query(service="organizer"), message="Reminder(s) set!")
 
 
-@router.post("/{__ENDPOINT_NAME__}/add_reminder_for/")
+@router.post("/" + __ENDPOINT_NAME__ + "/add_reminder_for/")
 async def add_reminders_for(event_id: int, reminders: Reminders) -> QueryResponse:
     query = Query(service="organizer")
     reply = "Calendar is empty!"
@@ -36,7 +36,7 @@ async def add_reminders_for(event_id: int, reminders: Reminders) -> QueryRespons
     return QueryResponse(query=query, message=f"Thanks, reminders set for {event_id}")
 
 
-@router.post("/{__ENDPOINT_NAME__}/add_fedocal_events/")
+@router.post("/" + __ENDPOINT_NAME__ + "/add_fedocal_events/")
 async def add_fedocal_events(events: List[FedocalEvent], reminders: Reminders) -> QueryResponse:
     query = Query(service="organizer")
     results = await Calendar.add_all_new_events(events=[event_from_fedocal(m) for m in events], notification=reminders.notification, deltas=reminders.deltas)
@@ -44,7 +44,7 @@ async def add_fedocal_events(events: List[FedocalEvent], reminders: Reminders) -
     return QueryResponse(query=query, message="event(s) added and reminder(s) set!", results=keys, results_count=len(keys))
 
 
-@router.post("/{__ENDPOINT_NAME__}/add_events/")
+@router.post("/" + __ENDPOINT_NAME__ + "/add_events/")
 async def add_events(events: List[CustomEvent], reminders: Reminders) -> QueryResponse:
     query = Query(service="organizer")
     results = await Calendar.add_all_new_events(events=events, notification=reminders.notification, deltas=reminders.deltas)
@@ -54,7 +54,7 @@ async def add_events(events: List[CustomEvent], reminders: Reminders) -> QueryRe
     return res
 
 
-@router.post("/{__ENDPOINT_NAME__}/cancel_event/")
+@router.post("/" + __ENDPOINT_NAME__ + "/cancel_event/")
 async def cancel_event(event_id: str) -> QueryResponse:
     query = Query(service="organizer")
     result = await Calendar.cancel(event_id)
@@ -64,7 +64,7 @@ async def cancel_event(event_id: str) -> QueryResponse:
         return QueryResponse(query=query, message=f"Unable to cancel {event_id}")
 
 
-@router.get("/{__ENDPOINT_NAME__}/calendar/")
+@router.get("/" + __ENDPOINT_NAME__ + "/calendar/")
 async def get_calendar(start: str, end: str) -> QueryResponse:
     query = Query(service="organizer")
     results = await Calendar.render(start_str=start, end_str=end)

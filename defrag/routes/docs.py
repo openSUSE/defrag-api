@@ -10,8 +10,8 @@ router = APIRouter()
 __ENDPOINT_NAME__ = "docs"
 
 
-@router.get("/{__ENDPOINT_NAME__}/search/single/{source}")
-@Memo_Redis.install_decorator(f"/{__ENDPOINT_NAME__}/search/single/")
+@router.get("/" + __ENDPOINT_NAME__ + "/search/single/{source}")
+@Memo_Redis.install_decorator(f"/" + __ENDPOINT_NAME__ + "/search/single/")
 async def search_single_source_docs(source: str, keywords: str) -> QueryResponse:
     if not ready_to_index([source]):
         await set_indexes()
@@ -20,8 +20,8 @@ async def search_single_source_docs(source: str, keywords: str) -> QueryResponse
     return QueryResponse(query=Query(service="search_docs"), results_count=len(results), results=results)
 
 
-@router.get("/{__ENDPOINT_NAME__}/search/merged/")
-@Memo_Redis.install_decorator(f"/{__ENDPOINT_NAME__}/search/merged/")
+@router.get("/" + __ENDPOINT_NAME__ + "/search/merged/")
+@Memo_Redis.install_decorator(f"/" + __ENDPOINT_NAME__ + "/search/merged/")
 async def handle_search_docs(keywords: str) -> QueryResponse:
     if not ready_to_index(["leap", "tumbleweed"]):
         await set_indexes()

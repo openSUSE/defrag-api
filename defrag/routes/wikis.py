@@ -6,12 +6,12 @@ from fastapi import APIRouter
 router = APIRouter()
 
 
-__ENDPOINT_NAME__ = "wiki"
+__ENDPOINT_NAME__ = "wikis"
 
 
-@router.get("/{__ENDPOINT_NAME__}/search/")
-@Memo_Redis.install_decorator(f"/{__ENDPOINT_NAME__}/search/")
-async def handle_search_wikis(keywords: str) -> QueryResponse:
+@router.get("/" +  __ENDPOINT_NAME__ + "/search/")
+#@Memo_Redis.install_decorator(f"/" + __ENDPOINT_NAME__ + "/search/")
+async def search_wikis(keywords: str) -> QueryResponse:
     results = await search_wikis_as_list(keywords)
-    query = Query(service="wiki")
+    query = Query(service="wikis")
     return QueryResponse(query=query, results=results, results_count=len(results))

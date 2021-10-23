@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+from typing import List
 from defrag.modules.helpers.requests import Req
 from defrag.modules.db.redis import RedisPool
 from defrag import app, LOGGER
@@ -26,7 +27,7 @@ import importlib
 
 
 @app.on_event("startup")
-async def register_modules_as_services() -> None:
+async def register_modules_as_services(included: List[str] = ["search"]) -> None:
     """ Registers all modules implementing 'register_service() """
     
     # flushing cache
@@ -34,10 +35,10 @@ async def register_modules_as_services() -> None:
         conn.flushall()
     
     # registering
-    for module_name in ALL_MODULES:
+    for module_name in (m for m in ALL_MODULES if m in included):
         imported_module = importlib.import_module("defrag.modules." + module_name)
         if hasattr(imported_module, "register_service"):
-            imported_module.register_service()
+            imported_module.register_service
             LOGGER.debug(f"Registered {module_name} as service.")
         
 

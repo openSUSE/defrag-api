@@ -9,7 +9,7 @@ router = APIRouter()
 __ENDPOINT_NAME__ = "dispatcher"
 
 
-@router.get("/{__ENDPOINT_NAME__}/poll_due/")
+@router.get("/" + __ENDPOINT_NAME__ + "/poll_due/")
 async def poll_due(sync: Optional[bool] = None) -> QueryResponse:
     query = Query(service="dispatcher")
     results = await Dispatcher.poll_due(True if sync is None else sync)

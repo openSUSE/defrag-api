@@ -16,7 +16,7 @@ async def search(keywords: str) -> QueryResponse:
     return QueryResponse(query=query, results=results, results_count=len(results))
 
 
-@router.get("/{__ENDPOINT_NAME__}/")
+@router.get("/" + __ENDPOINT_NAME__ + "/")
 async def get_reddit() -> QueryResponse:
     query = CacheQuery(service=__ENDPOINT_NAME__)
     async with Run(query) as response:
