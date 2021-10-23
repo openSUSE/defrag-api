@@ -12,6 +12,7 @@ class Session:
             await cls.client.close()
             cls.client = None
 
+    @classmethod
     def __new__(cls) -> ClientSession:
         if not cls.client or cls.client.closed:
             cls.client = ClientSession(trust_env=True)
