@@ -1,11 +1,11 @@
 from defrag.modules.helpers import Query, QueryResponse
 from defrag.modules.helpers.cache_manager import Memo_Redis
-from defrag.modules.api import search
+from defrag.modules.api_os import search
 
 from fastapi import APIRouter
 router = APIRouter()
 
-__ENDPOINT_NAME__ = "api"
+__ENDPOINT_NAME__ = "api_os"
 
 
 @router.get("/" + __ENDPOINT_NAME__ + "/search/{distribution}")

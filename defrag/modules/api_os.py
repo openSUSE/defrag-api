@@ -8,7 +8,7 @@ import lxml.etree
 
 from defrag import BUGZILLA_PASSWORD, BUGZILLA_USER
 
-__MOD_NAME__ = "api_opensuse"
+__MOD_NAME__ = "api_os"
 
 
 @dataclass
@@ -99,9 +99,9 @@ async def get_package_items(preq: PreparedRequest) -> List[Dict[str, Any]]:
 
 
 async def search(keyword: str, distribution: str) -> List[Dict[str, str]]:
-    if not distribution in ["Leap", "Tumbleweed"]:
+    if not distribution.lower() in ["leap", "tumbleweed"]:
         raise Exception(f"Invalid distribution name {distribution}")
-    distribution = "openSUSE:Factory" if distribution == "Tumbleweed" else "openSUSE:Leap:15.3"
+    distribution = "openSUSE:Factory" if distribution == "tumbleweed" else "openSUSE:Leap:15.3"
     q = OS_API_QUERY(
         "https://api.opensuse.org",
         "/search/published/binary/id",
