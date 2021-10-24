@@ -18,7 +18,7 @@ from typing import List
 from defrag.modules.helpers.requests import Session
 from defrag.modules.db.redis import RedisPool
 from defrag import app, LOGGER
-from defrag.modules import ALL_MODULES
+from defrag.modules import LOADED
 from defrag.routes import *
 
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
@@ -27,17 +27,16 @@ import importlib
 
 
 @app.on_event("startup")
-async def register_modules_as_services(included: List[str] = []) -> None:
+async def register_modules_as_services() -> None:
     """ Registers all modules implementing 'register_service() """
     
-    to_load = included or ALL_MODULES
 
     # flushing cache
     with RedisPool() as conn:
         conn.flushall()
     
     # registering
-    for module_name in (m for m in ALL_MODULES if m in to_load):
+    for module_name in LOADED:
         imported_module = importlib.import_module("defrag.modules." + module_name)
         if hasattr(imported_module, "register_service"):
             imported_module.register_service()

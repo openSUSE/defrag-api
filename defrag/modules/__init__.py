@@ -29,6 +29,6 @@ def discover_modules(path: str) -> List[str]:
     return discovered_modules
 
 ALL_MODULES = sorted(discover_modules(modules.__file__))
-__all__ = ALL_MODULES + ["ALL_MODULES"]
-
-LOGGER.info("Modules to load: %s", str(ALL_MODULES))
+TO_INCLUDE = []
+LOADED = TO_INCLUDE or ALL_MODULES
+LOGGER.info("Modules to load: %s", str(LOADED))
