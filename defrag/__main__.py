@@ -29,15 +29,14 @@ import importlib
 @app.on_event("startup")
 async def register_modules_as_services() -> None:
     """ Registers all modules implementing 'register_service() """
-
+    
     # flushing cache
     with RedisPool() as conn:
         conn.flushall()
 
     # registering
     for module_name in LOADED:
-        imported_module = importlib.import_module(
-            "defrag.modules." + module_name)
+        imported_module = importlib.import_module("defrag.modules." + module_name)
         if hasattr(imported_module, "register_service"):
             imported_module.register_service()
             LOGGER.debug(f"Registered {module_name} as service.")

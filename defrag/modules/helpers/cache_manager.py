@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from functools import wraps
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Generator, List, Optional
 from collections import UserDict
 
 from pottery import RedisDict
@@ -97,6 +97,12 @@ class Memo_Redis:
             return inner
             
         return decorator
+    
+    @staticmethod
+    def gen_decorator_store(redis_key: str) -> Generator[Any, Any, Any]:
+        if not redis_key in Memo_Redis.redicts:
+            raise Exception(f"Tried to get {redis_key} from Memo_Redis, but this key does not reference any item.")
+        return (x for x in Memo_Redis.redicts[redis_key])
 
 
 class Run:
