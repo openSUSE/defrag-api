@@ -1,0 +1,6 @@
+workflow:
+  steps:
+    - branch_package:
+        source_project: openSUSE:infrastructure:defrag
+        source_package: defrag-api
+        target_project: releases
