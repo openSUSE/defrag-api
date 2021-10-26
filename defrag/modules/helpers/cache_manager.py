@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from functools import wraps
-from typing import Any, Callable, Dict, Generator, List, Optional
+from typing import Callable, Dict, List, Optional
 from collections import UserDict
 
 from pottery import RedisDict
@@ -97,7 +97,7 @@ class Memo_Redis:
             return inner
             
         return decorator
-        
+
 
 class Run:
     """
