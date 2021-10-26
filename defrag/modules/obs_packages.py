@@ -8,7 +8,7 @@ import lxml.etree
 
 from defrag import BUGZILLA_PASSWORD, BUGZILLA_USER
 
-__MOD_NAME__ = "api_os"
+__MOD_NAME__ = "obs_packages"
 
 
 @dataclass
@@ -52,26 +52,26 @@ def build(items: List[Dict[str, Any]]) -> Generator[PackageEntry, None, None]:
     keys = PackageEntry.__annotations__.keys()
     for i in items:
         name = i['name']
-        if not name in names and is_relevant(i):
+        if not name in names:
             names.append(name)
             yield PackageEntry(**{k: v for k, v in i.items() if k in keys})
 
 
-def is_relevant(item: Dict[str, Any]) -> bool:
+def is_relevant(entry: PackageEntry, home_repos: bool) -> bool:
 
-    if "home:" in item['project']:
+    if "home:" in entry.project and not home_repos:
         return False
 
-    if any(sub in item['repository'].lower() for sub in ["tumbleweed", "opensuse"]):
+    if any(sub in entry.repository.lower() for sub in ["tumbleweed", "opensuse"]):
         return False
 
-    if ":branches:" in item['project']:
+    if ":branches:" in entry.project:
         return False
 
-    if any(sub in item['name'].lower() for sub in ["debuginfo", "debugsource", "buildsymbols", "devel", "lang", "l10n", "trans", "doc", "docs"]):
+    if any(sub in entry.name.lower() for sub in ["debuginfo", "debugsource", "buildsymbols", "devel", "lang", "l10n", "trans", "doc", "docs"]):
         return False
 
-    if item['arch'] == "src":
+    if entry.arch == "src":
         return False
 
     return True
@@ -98,7 +98,7 @@ async def get_package_items(preq: PreparedRequest) -> List[Dict[str, Any]]:
     return [{k: v for k, v in b.items()} for b in dom.xpath("/collection/binary")]
 
 
-async def search(keyword: str, distribution: str) -> List[Dict[str, str]]:
+async def search(keyword: str, distribution: str, home_repos: bool) -> List[Dict[str, str]]:
     if not distribution.lower() in ["leap", "tumbleweed"]:
         raise Exception(f"Invalid distribution name {distribution}")
     distribution = "openSUSE:Factory" if distribution == "tumbleweed" else "openSUSE:Leap:15.3"
@@ -109,4 +109,4 @@ async def search(keyword: str, distribution: str) -> List[Dict[str, str]]:
         keyword
     )
     items = await get_package_items(q.build())
-    return to_dict(sort_on("name", build(items)))
+    return to_dict(sort_on("name", (e for e in build(items) if is_relevant(e, home_repos))))
