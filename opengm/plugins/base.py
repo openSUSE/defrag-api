@@ -1,7 +1,7 @@
 import re
 import logging
 from pyrogram import Client, filters
-from pyrogram.types import Message, InlineKeyboardMarkup, CallbackQuery, InlineKeyboardButton
+from pyrogram.types import Message, InlineKeyboardMarkup, CallbackQuery, InlineKeyboardButton, ChatMemberUpdated
 from opengm.opengm import Opengm, command
 from opengm.utils.chat_status import user_admin, admins
 from opengm.utils.plugins import HELPABLE, HELPABLE_LOWER, paginate_plugins
@@ -20,7 +20,12 @@ I'm a modular group management bot with a few fun extras! Have a look at the fol
 - /help <module name>: PM's you help for that module.
 """
 
+def filter_admin_change_event(self, client, update):
+    print(hasattr(update, "old_chat_member"))
+    print(hasattr(update, "new_chat_member"))
+    return bool(update.old_chat_member) & bool(update.new_chat_member)
 
+admin_change_filter = filters.create(filter_admin_change_event)
 @Opengm.on_message(filters.command("help"))
 async def help(cl: Client, message: Message) -> None:
     args = get_args(message)
@@ -61,7 +66,7 @@ async def help_button_callback(cl: Client, query: CallbackQuery) -> None:
 
 
 @Opengm.on_message(filters.command("reload") & filters.group)
-async def reload_admins(bot: Client, message: Message):
+async def manually_reload_admins(bot: Client, message: Message):
     chat = message.chat
     member = await bot.get_chat_member(chat.id, message.from_user.id)
     if member.status not in ('administrator', 'creator'):
@@ -72,3 +77,25 @@ async def reload_admins(bot: Client, message: Message):
         list.append(i.user.id)
     admins[message.chat.id] = list
     await message.reply_text("Admins have been updated.")
+
+@Opengm.on_chat_member_updated(filters.group & admin_change_filter)
+async def reload_admins(bot: Client, update: ChatMemberUpdated):
+    print(update)
+    if not hasattr(update, "old_chat_member"):
+        print("No!")
+        return
+    chat = update.chat
+    alist = admins[update.chat.id]
+    if update.new_chat_member.status in ('administrator', 'creator') and update.old_chat_member.status not in ('administrator', 'creator'):
+        if update.new_chat_member.user.id not in alist:
+            alist.append(update.new_chat_member.user.id)
+        LOGGER.info(f"Added {update.new_chat_member.user.id} to the admin store in {chat.id}")
+    elif update.new_chat_member.status not in ('administrator', 'creator') and update.old_chat_member.status in ('administrator', 'creator'):
+        alist.remove(update.new_chat_member.user.id)
+        LOGGER.info(f"Removed {update.new_chat_member.user.id} from the admin store in {chat.id}")
+    admins[chat.id] = alist
+    pass
+
+@Opengm.on_chat_member_updated(filters.group & filters.new_chat_members)
+async def bot_added_to_group(bot: Client, update: ChatMemberUpdated):
+    print("Yo!")
