@@ -1,5 +1,5 @@
 from defrag.modules.helpers import QueryResponse, Query
-from defrag.modules.helpers.cache_manager import Memo_Redis, Run, CacheQuery
+from defrag.modules.helpers.cache_manager import memo_redis, Run, CacheQuery
 from defrag.modules.twitter import search
 
 from fastapi import APIRouter
@@ -9,7 +9,7 @@ router = APIRouter()
 __ENDPOINT_NAME__ = "twitter"
 
 @router.get("/" + __ENDPOINT_NAME__ + "/search/")
-@Memo_Redis.install_decorator(f"/" + __ENDPOINT_NAME__ + "/search/")
+@memo_redis(f"/" + __ENDPOINT_NAME__ + "/search/")
 async def search(keywords: str) -> QueryResponse:
     results = await search(keywords)
     query = Query(service=__ENDPOINT_NAME__)

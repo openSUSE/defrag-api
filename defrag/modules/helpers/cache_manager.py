@@ -74,25 +74,24 @@ class Cache:
         LOGGER.info("Registered: " + name)
 
 
-class Memo_Redis:
+class memo_redis:
     
     redicts: Dict[str, RedisDict] = {}
 
-    @staticmethod
-    def install_decorator(redict_key: str):
+    def __new__(cls, redict_key: str):
         
-        if not redict_key in Memo_Redis.redicts:
-            Memo_Redis.redicts[redict_key] = RedisDict(redis=RedisPool().connection, key=redict_key)
+        if not redict_key in memo_redis.redicts:
+            memo_redis.redicts[redict_key] = RedisDict(redis=RedisPool().connection, key=redict_key)
         
         def decorator (f: Callable) -> Callable:
             
             @wraps(f)
             async def inner(*args, **kwargs):
                 func_call_key = hash(f"{f.__name__}{args}{kwargs}")
-                if func_call_key in Memo_Redis.redicts[redict_key]:
-                    return QueryResponse(**Memo_Redis.redicts[redict_key][func_call_key])
+                if func_call_key in memo_redis.redicts[redict_key]:
+                    return QueryResponse(**memo_redis.redicts[redict_key][func_call_key])
                 res: QueryResponse = await f(*args, **kwargs)
-                Memo_Redis.redicts[redict_key][func_call_key] = res.dict()
+                memo_redis.redicts[redict_key][func_call_key] = res.dict()
                 return res
             return inner
             

@@ -1,6 +1,6 @@
 from defrag.modules.helpers.requests import Session
 import pytest
-from defrag.modules.bugs import BugzillaQueryEntry, search_bugs_with_term, search_all_bugs, register_service, login
+from defrag.modules.bugs import BugzillaQueryEntry, search, search_bugs_with_term, search_all_bugs, register_service, login
 from defrag.modules.db.redis import RedisPool
 
 
@@ -18,6 +18,12 @@ async def test_register():
 async def test_endpoint(term="wayland"):
     response = await Session().get(f"https://bugzilla.opensuse.org/buglist.cgi?quicksearch={term}")
     res = await response.text()
+    assert res
+
+
+@pytest.mark.asyncio
+async def test_global_search(term="wayland"):
+    res = await search(term)
     assert res
 
 

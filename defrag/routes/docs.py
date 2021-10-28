@@ -3,7 +3,7 @@ from defrag.modules.docs import *
 
 from fastapi import APIRouter
 
-from defrag.modules.helpers.cache_manager import Memo_Redis
+from defrag.modules.helpers.cache_manager import memo_redis
 router = APIRouter()
 
 
@@ -11,7 +11,7 @@ __ENDPOINT_NAME__ = "docs"
 
 
 @router.get("/" + __ENDPOINT_NAME__ + "/search/single/{source}")
-@Memo_Redis.install_decorator(f"/" + __ENDPOINT_NAME__ + "/search/single/")
+@memo_redis(f"/" + __ENDPOINT_NAME__ + "/search/single/")
 async def search_single_source_docs(source: str, keywords: str) -> QueryResponse:
     if not ready_to_index([source]):
         await set_indexes()
@@ -21,7 +21,7 @@ async def search_single_source_docs(source: str, keywords: str) -> QueryResponse
 
 
 @router.get("/" + __ENDPOINT_NAME__ + "/search/merged/")
-@Memo_Redis.install_decorator(f"/" + __ENDPOINT_NAME__ + "/search/merged/")
+@memo_redis(f"/" + __ENDPOINT_NAME__ + "/search/merged/")
 async def handle_search_docs(keywords: str) -> QueryResponse:
     if not ready_to_index(["leap", "tumbleweed"]):
         await set_indexes()
