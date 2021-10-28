@@ -89,7 +89,7 @@ class RedditStore(StoreWorkerMixin, BaseStore):
         self.logs.last_refresh = datetime.now().timestamp()
 
 
-async def search_reddit(keywords: str) -> List[RedditPostEntry]:
+async def search(keywords: str) -> List[RedditPostEntry]:
     return await parser(f"https://www.reddit.com/r/openSUSE/search.rss?q={keywords}&sort=relevance&restrict_sr=1&type=link&limit=75")
 
 

@@ -16,7 +16,7 @@ async def test_register():
 
 @pytest.mark.asyncio
 async def test_endpoint(term="wayland"):
-    response = await Session().get(f"https://bugzilla.opensuse.org/buglist.cgi?quicksearch={term}") as response:
+    response = await Session().get(f"https://bugzilla.opensuse.org/buglist.cgi?quicksearch={term}")
     res = await response.text()
     assert res
 

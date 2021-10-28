@@ -66,29 +66,27 @@ async def get_this_bug(bug_id: int) -> BugzillaQueryEntry:
 
 async def search_bugs_with_term(term: str) -> List[int]:
     try:
-        client = Session()
-        ok = client.get()
-        async with Session.get(f"https://bugzilla.opensuse.org/buglist.cgi?quicksearch={term}") as response:
-            if response.status == 200:
-                text = await response.text()
-                soup = BeautifulSoup(text, "lxml")
-                bz_result_count = soup.find(
-                    "span", {"class": "bz_result_count"})
-                result = []
-                if bz_result_count.find("span",{"class": "zero_results"}) is None:
-                    bz_buglist = soup.find(
-                        "table", {
-                            "class": "bz_buglist"}).findAll(
-                        "tr", {
-                            "class": "bz_bugitem"})
-                    for row in bz_buglist:
-                        columns = row.findAll("td")
-                        if len(columns) == 8:
-                            id = int(columns[0].text.replace("\n", ""))
-                            result.append(id)
-                return result
-            else:
-                raise ParsingException("Unknown error occured")
+        response = await Session().get(f"https://bugzilla.opensuse.org/buglist.cgi?quicksearch={term}")
+        if response.status == 200:
+            text = await response.text()
+            soup = BeautifulSoup(text, "lxml")
+            bz_result_count = soup.find(
+                "span", {"class": "bz_result_count"})
+            result = []
+            if bz_result_count.find("span", {"class": "zero_results"}) is None:
+                bz_buglist = soup.find(
+                    "table", {
+                        "class": "bz_buglist"}).findAll(
+                    "tr", {
+                        "class": "bz_bugitem"})
+                for row in bz_buglist:
+                    columns = row.findAll("td")
+                    if len(columns) == 8:
+                        id = int(columns[0].text.replace("\n", ""))
+                        result.append(id)
+            return result
+        else:
+            raise ParsingException("Unknown error occured")
     except Exception as exp:
         raise exp
 
@@ -100,10 +98,14 @@ async def search_all_bugs(query: BugzillaQueryEntry) -> List[Dict[str, Any]]:
     if not bugs_ids:
         return []
     results = [
-        { **model.dict(exclude_unset=True),**model.dict(exclude_none=True) }
+        {**model.dict(exclude_unset=True), **model.dict(exclude_none=True)}
         for model in await asyncio.gather(*[get_this_bug(bug_id) for n, bug_id in enumerate(bugs_ids) if n < 26])
     ]
     return results
+
+
+async def search(keywords: str) -> List[Dict[str, Any]]:
+    return await search_all_bugs(BugzillaQueryEntry(search_string=keywords))
 
 
 def register_service():

@@ -81,7 +81,7 @@ class TwitterStore(StoreWorkerMixin, BaseStore):
         pass
 
 
-async def search_tweets(keywords: str) -> List[TwitterEntry]:
+async def search(keywords: str) -> List[TwitterEntry]:
     try:
         search = as_async(api.GetSearch)
         raw_query = f"q=openSUSE {keywords}&result_type=recent&count=100"

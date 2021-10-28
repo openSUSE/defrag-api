@@ -1,6 +1,6 @@
 from defrag.modules.helpers import CacheQuery, Query, QueryResponse
 from defrag.modules.helpers.cache_manager import Memo_Redis, Run
-from defrag.modules.bugs import BugzillaQueryEntry, search_all_bugs
+from defrag.modules.bugs import BugzillaQueryEntry, search
 
 from fastapi import APIRouter
 router = APIRouter()
@@ -25,6 +25,5 @@ async def get_bug(bug_id: int) -> QueryResponse:
 @router.get("/" + __ENDPOINT_NAME__ + "/search/")
 @Memo_Redis.install_decorator("/" + __ENDPOINT_NAME__ + "/search/")
 async def search(term: str) -> QueryResponse:
-    query = BugzillaQueryEntry(search_string=term)
-    result = await search_all_bugs(query)
+    result = await search(BugzillaQueryEntry(search_string=term))
     return QueryResponse(query=Query(service="bugs"), results_count=len(result), results=result)

@@ -1,3 +1,4 @@
+from logging import error
 from defrag.modules.helpers import Query, QueryResponse
 from defrag.modules.helpers.cache_manager import Memo_Redis
 from defrag.modules.search import SearchQuery, search_map
@@ -14,11 +15,15 @@ __ENDPOINT_NAME__ = "search"
 async def global_search(keywords: str, scope: str) -> QueryResponse:
     query = Query(service="search")
     sq = SearchQuery(keywords=keywords, scope=[s.strip() for s in scope.split(",")])
-    searchers = [f for n, f in search_map.items() if n in sq.scope]
+    off_scope = [s for s in sq.scope if not s in search_map.keys()]
+    if off_scope:
+        return QueryResponse(query=query, error=f"These scopes go beyond our current available scopes: {off_scope}")
+    
     results = {}
     results_counts = 0
-    for response in asyncio.as_completed([search(sq.keywords) for search in searchers]):
-        res = await response
+    responses = await asyncio.gather(*[search(sq.keywords) for search in search_map.values()])
+    
+    for res in responses:
         count = res.results_count
         results[res.query.service] = {
             "results": res.results, "results_count": count}

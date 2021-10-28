@@ -101,6 +101,7 @@ async def set_indexes() -> None:
     leap, tw = await create_indexes_in_parallel()
     set_global_index("leap", leap)
     set_global_index("tumbleweed", tw)
+    print("Docs indexes ready.")
 
 
 def ready_to_index(sources: List[str]) -> bool:
@@ -110,7 +111,8 @@ def ready_to_index(sources: List[str]) -> bool:
     return True
 
 
-def search_indexes_in_parallel(keywords: str) -> List[Dict[str, Any]]:
+def search(keywords: str) -> List[Dict[str, Any]]:
+    """ Search indexes in parallel. """
     with ProcessPoolExecutor(max_workers=2) as executor:
         leap_worker = executor.submit(
             search_index, **{"idx": indexes["leap"]["index"], "source": "leap", "keywords": keywords})

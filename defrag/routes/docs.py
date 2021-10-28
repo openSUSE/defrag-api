@@ -25,5 +25,5 @@ async def search_single_source_docs(source: str, keywords: str) -> QueryResponse
 async def handle_search_docs(keywords: str) -> QueryResponse:
     if not ready_to_index(["leap", "tumbleweed"]):
         await set_indexes()
-    results = sorted_on_score(search_indexes_in_parallel(keywords))
+    results = sorted_on_score(search(keywords))
     return QueryResponse(query=Query(service="search_docs"), results_count=len(results), results=results)
