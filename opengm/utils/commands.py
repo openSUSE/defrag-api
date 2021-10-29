@@ -1,9 +1,6 @@
 from pyrogram.types import Message
 from pyrogram import filters
 
-username = ""
-
-
 def get_args(msg: Message):
     return msg.text.split()[1:]
 
