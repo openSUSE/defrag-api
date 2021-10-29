@@ -1,16 +1,14 @@
-
 from asyncio.tasks import Task, wait_for
 from datetime import datetime
-from defrag import LOGGER, app
-from defrag.modules.helpers import Query, QueryResponse
-from defrag.modules.db.redis import RedisPool
-from defrag.modules.helpers.requests import Req
-from defrag.modules.helpers.data_manipulation import dropwhile_takeif
-from defrag.modules.helpers.sync_utils import as_async, run_redis_jobs
 from pottery import RedisSet, RedisDict, RedisDeque
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional, Union
 import asyncio
+
+from defrag import LOGGER
+from defrag.modules.db.redis import RedisPool
+from defrag.modules.helpers.requests import Session
+from defrag.modules.helpers.sync_utils import as_async, run_redis_jobs
 
 __MODULE_NAME__ = "dispatcher"
 
@@ -39,18 +37,17 @@ class TelegramNotification(Notification):
 class Dispatchable(BaseModel):
     origin: str
     notification: Notification
+    id: Optional[int] = None
     retries: int = 0
     schedules: List[float] = []
-    id: Optional[str] = None
 
 
 class HashedDispatchable(Dispatchable):
 
-    id: Optional[int] = None
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.id = self.id or str(abs(hash(str(self.notification))))
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not hasattr(super(), "id") or not super().id:
+            self.id = hash(datetime.now().timestamp())
         self.schedules = sorted(self.schedules, reverse=True)
 
 
@@ -114,7 +111,7 @@ class Dispatcher:
         item = HashedDispatchable(
             **dispatchable.dict()
         ).dict() if isinstance(dispatchable, Dispatchable) else dispatchable
-        if not "id" in item:
+        if not "id" in item or not item['id']:
             raise Exception("Cannot process items without id!")
         await cls.process_q.put(item)
 
@@ -233,33 +230,24 @@ class Dispatcher:
         if not sync or not cls.due_last_poll:
             return list(cls.due_for_polling_notifications)
 
-        def drop_condition(
-            item): return item["notification"]["dispatched"] < cls.due_last_poll
-        def take_condition(
+        def pred(
             item): return item["notification"]["dispatched"] > cls.due_last_poll
-        slice = list(dropwhile_takeif(
-            cls.due_for_polling_notifications, drop_condition, take_condition))
-        redis_jobs = [cls.due_for_polling_notifications.pop for _ in slice]
-        await as_async(run_redis_jobs)(redis_jobs)
+        slice = [e for e in cls.due_for_polling_notifications if pred(e)]
+        removing_all_due = (
+            cls.due_for_polling_notifications.pop for _ in slice)
+        await as_async(run_redis_jobs)(removing_all_due)
         cls.due_last_poll = datetime.now().timestamp()
-        return slice
+        return list(slice)
 
     @staticmethod
     async def push(item: Dict[str, Any], testing: bool = True) -> Dict[str, Any]:
         """ Sends a dispatched dispatchable to its final destination. """
         if not testing:
             if data := item["requests_options"]["data"]:
-                async with Req(item["requests_options"]["url"], json=data) as response:
-                    return {"status": response.status, "item": item}
+                response = await Session().get(item["requests_options"]["url"], json=data)
+                return {"status": response.status, "item": item}
         return {"status_code": 200, "item": item}
 
     @staticmethod
     def has_toretry(response: Dict[str, Any]) -> bool:
         return response["status_code"] != 200 and response["item"]["retries"] < 3
-
-
-@app.get(f"/{__MODULE_NAME__}/poll_due/")
-async def poll_due(sync: Optional[bool] = None) -> QueryResponse:
-    query = Query(service=__MODULE_NAME__)
-    results = await Dispatcher.poll_due(True if sync is None else sync)
-    return QueryResponse(query=query, results_count=len(results), results=results)

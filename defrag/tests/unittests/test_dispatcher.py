@@ -27,7 +27,6 @@ async def test_Dispatcher():
     assert len(Dispatcher.due_for_polling_notifications) == 3
     assert not Dispatcher.scheduled
 
-
 @pytest.mark.asyncio
 async def test_poll_due():
     with RedisPool() as conn:

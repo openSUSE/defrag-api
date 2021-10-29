@@ -1,4 +1,4 @@
-from defrag import app
+from defrag.routes import app
 from defrag.modules.db.redis import RedisPool
 from defrag.modules.suggestions import Suggestions
 from fastapi.testclient import TestClient

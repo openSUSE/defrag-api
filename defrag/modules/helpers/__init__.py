@@ -14,9 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 from pydantic.main import BaseModel
-
 
 """ FIXME 
     make Query and subclasses subclass of pydantic `BaseModel`    
@@ -25,12 +24,30 @@ from pydantic.main import BaseModel
 
 class Query(BaseModel):
     service: str
-    item_key: Optional[Union[int, str]]
+    item_id: Optional[Union[int, str]]
 
 
 class CacheQuery(Query):
-    service: str
-    item_key: Optional[Union[int, str]] = None
+
+    filter_pred: Optional[Callable[[Any], bool]] = None
+    sort_on_key: Optional[str] = None
+    reverse: bool = False
+    count: Optional[int] = None
+
+    def __init__(
+        self,
+        service: str,
+        item_id: Optional[Union[int, str]] = None,
+        filter_pred: Optional[Callable[[Any], bool]] = None,
+        sort_on_key: Optional[str] = None,
+        reverse: bool = False,
+        count: Optional[int] = None
+    ) -> None:
+        super().__init__(**{"service": service, "id_key": item_id})
+        self.filter_pred = filter_pred
+        self.sort_on_key = sort_on_key
+        self.reverse = reverse
+        self.count = count
 
 
 class QueryResponse(BaseModel):

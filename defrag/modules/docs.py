@@ -1,16 +1,15 @@
-from defrag import app
-from defrag.modules.helpers.services_manager import ServiceTemplate, ServicesManager
-from defrag.modules.helpers.requests import Req
-from defrag.modules.helpers import Query, QueryResponse
+from defrag.modules.helpers.requests import Session
 from lunr import lunr
 from lunr.index import Index
 from bs4 import BeautifulSoup
 from pydantic import BaseModel
 from concurrent.futures import ProcessPoolExecutor
+from typing import Any, Dict, List, Tuple
+from functools import partial
+
 import asyncio
 import json
 import sys
-from typing import Any, Dict, List, Tuple
 
 __MOD_NAME__ = "documentation"
 
@@ -35,10 +34,14 @@ indexes = {
 
 
 async def get_data(source: str) -> Any:
-    async with Req(indexes[source]["url"]) as result:
+    try:
+        result = await Session().get(indexes[source]["url"])
         if source == "tumbleweed":
             return await result.read()
         return await result.text()
+    except Exception as error:
+        print("ERROR", str(error))
+        raise Exception("My error", error)
 
 
 def make_soup(data_str: str) -> List[LunrDoc]:
@@ -88,6 +91,27 @@ def set_global_index(source: str, idx: Index) -> None:
     indexes[source]["index"] = idx
 
 
+async def create_indexes_in_parallel() -> Tuple[Index, Index]:
+    leap_data, tw_data = await asyncio.gather(get_data("leap"), get_data("tumbleweed"))
+    loop = asyncio.get_event_loop()
+    sys.setrecursionlimit(0x100000)
+    with ProcessPoolExecutor(max_workers=2) as executor:
+        _make_leap = partial(make_leap_index, raw=leap_data)
+        _make_tw = partial(make_tumbleweed_index, raw=tw_data)
+        leap_res, tw_res = await asyncio.gather(
+            loop.run_in_executor(executor, _make_leap), 
+            loop.run_in_executor(executor, _make_tw)
+        )
+        return leap_res, tw_res
+
+
+async def set_indexes() -> None:
+    leap, tw = await create_indexes_in_parallel()
+    set_global_index("leap", leap)
+    set_global_index("tumbleweed", tw)
+    print("Docs indexes ready.")
+
+
 def ready_to_index(sources: List[str]) -> bool:
     for s in sources:
         if not indexes[s]["index"]:
@@ -95,65 +119,13 @@ def ready_to_index(sources: List[str]) -> bool:
     return True
 
 
-def make_index_search_leap(leap_data: str, keywords: str) -> Tuple[Index, List[Dict[str, Any]]]:
-    idx = make_leap_index(leap_data)
-    return idx, search_index(idx, "leap", keywords)
-
-
-def make_index_search_tumbleweed(tw_data: bytes, keywords: str) -> Tuple[Index, List[Dict[str, Any]]]:
-    idx = make_tumbleweed_index(tw_data)
-    return idx, search_index(idx, "tumbleweed", keywords)
-
-
-async def make_search_set_indexes_in_parallel(keywords: str) -> List[Dict[str, Any]]:
-
-    leap, tw = await asyncio.gather(get_data("leap"), get_data("tumbleweed"))
-    sys.setrecursionlimit(0x100000)
+async def search(keywords: str) -> List[Dict[str, Any]]:
+    loop = asyncio.get_event_loop()
     with ProcessPoolExecutor(max_workers=2) as executor:
-        leap_worker = executor.submit(
-            make_index_search_leap, **{"leap_data": leap, "keywords": keywords})
-        tw_worker = executor.submit(
-            make_index_search_tumbleweed, **{"tw_data": tw, "keywords": keywords})
-        leap_index, leap_results = leap_worker.result()
-        tw_index, tw_results = tw_worker.result()
-        set_global_index("leap", leap_index)
-        set_global_index("tumbleweed", tw_index)
-        return leap_results + tw_results
-
-
-def search_indexes_in_parallel(keywords: str) -> List[Dict[str, Any]]:
-    with ProcessPoolExecutor(max_workers=2) as executor:
-        leap_worker = executor.submit(
-            search_index, **{"idx": indexes["leap"]["index"], "source": "leap", "keywords": keywords})
-        tw_worker = executor.submit(
-            search_index, **{"idx": indexes["tumbleweed"]["index"], "source": "tumbleweed", "keywords": keywords})
-        return leap_worker.result() + tw_worker.result()
-
-
-@app.get("/" + __MOD_NAME__ + "/single/{source}/")
-async def search_single_source_docs(source: str, keywords: str) -> QueryResponse:
-    if not ready_to_index([source]):
-        if source == "tumbleweed":
-            set_global_index("tumbleweed", make_tumbleweed_index(await get_data(source)))
-        else:
-            set_global_index("leap", make_leap_index(await get_data(source)))
-    results = sorted_on_score(search_index(
-        indexes[source]["index"], source, keywords))
-    return QueryResponse(query=Query(service="search_docs"), results_count=len(results), results=results)
-
-
-@app.get("/" + __MOD_NAME__ + "/merged/")
-async def search(keywords: str) -> QueryResponse:
-    if not ready_to_index(["leap", "tumbleweed"]):
-        results = await make_search_set_indexes_in_parallel(keywords)
-        return QueryResponse(query=Query(service="search_docs"), results_count=len(results), results=results)
-    else:
-        results = sorted_on_score(search_indexes_in_parallel(keywords))
-        return QueryResponse(query=Query(service="search_docs"), results_count=len(results), results=results)
-
-
-def register_service():
-    asyncio.create_task(make_search_set_indexes_in_parallel(""))
-    template = ServiceTemplate(__MOD_NAME__, None, None, None, None, None)
-    service = ServicesManager.realize_service_template(template, None)
-    ServicesManager.register_service(__MOD_NAME__, service)
+        _search_leap = partial(search_index, idx=indexes["leap"]["index"], source="leap", keywords=keywords)
+        _search_tw = partial(search_index, idx=indexes["tumbleweed"]["index"], source="tumbleweed", keywords=keywords)
+        leap_res, tw_res = await asyncio.gather(
+            loop.run_in_executor(executor, _search_leap),
+            loop.run_in_executor(executor, _search_tw)
+        )
+        return leap_res + tw_res

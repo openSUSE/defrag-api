@@ -2,11 +2,12 @@ from datetime import datetime, timedelta
 from pydantic.main import BaseModel
 from defrag.modules.helpers.sync_utils import as_async
 from typing import Any, Dict, List, Optional
-from defrag.modules.db.redis import RedisPool
-from defrag import app
-from defrag.modules.helpers import QueryResponse, EitherErrorOrOk, Query
 from math import sqrt
 from pottery import RedisDict
+
+
+from defrag.modules.db.redis import RedisPool
+from defrag.modules.helpers import EitherErrorOrOk
 
 __MODULE_NAME__ = "suggestions"
 
@@ -100,30 +101,3 @@ class Suggestions:
         if key and not key in Suggestions.container:
             return EitherErrorOrOk(error=f"You were looking for this key {key} but it could not be found!")
         return EitherErrorOrOk(ok=await as_async(lambda: Suggestions.container[key])())
-
-
-@app.get(f"/{__MODULE_NAME__}/")
-async def get_suggestions(key: Optional[str] = None) -> QueryResponse:
-    query = Query(service=__MODULE_NAME__)
-    results = await Suggestions.view(key)
-    if ok := results.is_ok():
-        return QueryResponse(query=query, results=results, results_count=len(ok))
-    return QueryResponse(query=query, error=str(ok))
-
-
-@app.post(f"/{__MODULE_NAME__}/create/")
-async def create_suggestion(sugg: Suggestions.New) -> QueryResponse:
-    query = Query(service=__MODULE_NAME__)
-    result = await Suggestions.add(sugg)
-    if result.is_ok():
-        return QueryResponse(query=query, message="Thanks!")
-    return QueryResponse(query=query, error="Didn't turn out the way we anticipated!")
-
-
-@app.post(f"/{__MODULE_NAME__}/vote_for_suggestion/")
-async def vote_for_suggestion(voter_id: str, sugg_id: str, vote: int) -> QueryResponse:
-    query = Query(service=__MODULE_NAME__)
-    result = await Suggestions.cast_vote(voter_id=voter_id, key=sugg_id, vote=vote)
-    if result.is_ok():
-        return QueryResponse(query=query, message="Thanks!")
-    return QueryResponse(query=query, error=result.error)

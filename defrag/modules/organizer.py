@@ -1,17 +1,16 @@
 import asyncio
 from defrag.modules.helpers.data_manipulation import partition_left_right
 from functools import reduce
-from defrag import app
 from datetime import datetime, timedelta, timezone
 from defrag.modules.helpers.sync_utils import as_async
 from defrag.modules.db.redis import RedisPool
-from defrag.modules.helpers import EitherErrorOrOk, FailuresAndSuccesses, Query, QueryResponse
+from defrag.modules.helpers import EitherErrorOrOk, FailuresAndSuccesses
 from defrag.modules.dispatcher import Dispatcher, Dispatchable, Notification, TelegramNotification
 from pottery import RedisDict
 from typing import Any, Dict, List, Optional, Tuple
 from dateutil import rrule
 from pydantic.main import BaseModel
-from defrag.modules.helpers.requests import Req
+from defrag.modules.helpers.requests import Session
 
 __MOD_NAME__ = "organizer"
 
@@ -77,7 +76,7 @@ class Rrule(BaseModel):
 
 class CustomEvent(BaseModel):
 
-    id: str
+    id: int
     title: str
     manager: str # as datetime.strftime with "%Y-%m-%d%H:%M:%S" from datetime.now(timezone.utc)
     creator: str
@@ -227,7 +226,7 @@ class Calendar:
     container = RedisDict({}, redis=RedisPool().connection,
                           key=CAL_NAME)
     # maps str hashes into datetimes for quicker access
-    viewer: Dict[str, datetime] = {}
+    viewer: Dict[int, datetime] = {}
 
     @classmethod
     async def add(cls, _event: CustomEvent, notification: Notification, deltas: Reminders.UserDeltas) -> EitherErrorOrOk:
@@ -313,9 +312,9 @@ class Calendar:
         now = datetime.now()
         start, _ = disassemble_to_date_time(datetime.now())
         end, _ = disassemble_to_date_time(now + (interval or POLL_INTERVAL))
-        async with Req(FEDOCAL_URL, params={"start": start, "end": end}) as response:
-            res = await response.json()
-            return [FedocalEvent(**entry) for entry in res["events"]]
+        response = await Session().get(FEDOCAL_URL, params={"start": start, "end": end})
+        res = await response.json()
+        return [FedocalEvent(**entry) for entry in res["events"]]
 
     @staticmethod
     async def set_reminders_from_fedocal(events: List[FedocalEvent], user_deltas: Reminders.UserDeltas) -> EitherErrorOrOk:
@@ -329,7 +328,7 @@ class Calendar:
 
     @staticmethod
     def prime_event(event: CustomEvent) -> CustomEvent:
-        event.id = str(abs(hash(event.creator + event.start + event.end)))
+        event.id = abs(hash(event.creator + event.start + event.end))
         event.changelog = [{"created": datetime.now().strftime(FORMAT)}]
         return event
 
@@ -354,67 +353,3 @@ class Calendar:
         def rendering() -> List[Dict[str, Any]]:
             return [e for e in Calendar.container.values() if condition(e)]
         return await as_async(rendering)()
-
-# --------
-# HANDLERS
-# --------
-
-
-@app.post(f"/{__MOD_NAME__}/add_reminder/")
-async def post_reminders(reminder: Reminders) -> QueryResponse:
-    query = Query(service=__MOD_NAME__)
-    if not reminder.tgt:
-        return QueryResponse(query=query, error=f"You need to add a 'tgt' (datetime string encoded as {FORMAT} to set this reminder: {reminder}")
-    await Reminders.schedule(tgt=reminder.tgt, notification=reminder.notification, deltas=reminder.deltas)
-    return QueryResponse(query=Query(service=__MOD_NAME__), message="Reminder(s) set!")
-
-
-@app.post(f"/{__MOD_NAME__}/add_reminder_for/")
-async def post_reminders_for(event_id: int, reminders: Reminders) -> QueryResponse:
-    query = Query(service=__MOD_NAME__)
-    reply = "Calendar is empty!"
-    if not Calendar.container:
-        return QueryResponse(query=query, error=reply)
-
-    def look_up(event_id): 
-        return Calendar.container[event_id] if event_id in Calendar.container.keys() else None
-    found = await as_async(look_up)(event_id)
-    if not found:
-        reply = f"Unable to find this calendar item: {event_id}"
-        return QueryResponse(query=query, error=reply)
-    await Reminders.schedule(tgt=found["start"], notification=reminders.notification, deltas=reminders.deltas)
-    return QueryResponse(query=query, message=f"Thanks, reminders set for {event_id}")
-
-
-@app.post(f"/{__MOD_NAME__}/add_fedocal_events/")
-async def post_fedocal_events(events: List[FedocalEvent], reminders: Reminders) -> QueryResponse:
-    query = Query(service=__MOD_NAME__)
-    results = await Calendar.add_all_new_events(events=[event_from_fedocal(m) for m in events], notification=reminders.notification, deltas=reminders.deltas)
-    keys = [e.ok["id"] for e in results.successes if hasattr(e, "ok")]
-    return QueryResponse(query=query, message="event(s) added and reminder(s) set!", results=keys, results_count=len(keys))
-
-
-@app.post(f"/{__MOD_NAME__}/add_events/")
-async def post_events(events: List[CustomEvent], reminders: Reminders) -> QueryResponse:
-    query = Query(service=__MOD_NAME__)
-    results = await Calendar.add_all_new_events(events=events, notification=reminders.notification, deltas=reminders.deltas)
-    keys = [e.ok["id"] for e in results.successes if hasattr(e, "ok")]
-    res = QueryResponse(query=query, message="event(s) added and reminder(s) set!", results=keys, results_count=len(keys))
-    return res
-
-
-@app.post(f"/{__MOD_NAME__}/cancel_event/")
-async def post_cancel_event(event_id: str) -> QueryResponse:
-    query = Query(service=__MOD_NAME__)
-    result = await Calendar.cancel(event_id)
-    if hasattr(result, "ok"):
-        return QueryResponse(query=query, message=f"event and reminder(s) cancelled for {event_id}")
-    else:
-        return QueryResponse(query=query, message=f"Unable to cancel {event_id}")
-
-
-@app.get(f"/{__MOD_NAME__}/calendar/")
-async def get_calendar(start: str, end: str) -> QueryResponse:
-    query = Query(service=__MOD_NAME__)
-    results = await Calendar.render(start_str=start, end_str=end)
-    return QueryResponse(query=query, results=results, results_count=len(results))

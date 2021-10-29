@@ -1,21 +1,21 @@
-from defrag.modules.twitter import TwitterStore, register_service, search_tweets
+from defrag.modules.db.redis import RedisPool
+from defrag.modules.twitter import search
 from fastapi.testclient import TestClient
-from defrag import app
+from defrag.routes import app
 import pytest
 
 client = TestClient(app)
-register_service()
 
 
 @pytest.mark.asyncio
-async def test_get_twitter():
-    res = await TwitterStore.fetch_items()
-    assert res
+async def test_init():
+    with RedisPool() as conn:
+        conn.flushall()
 
 
 @pytest.mark.asyncio
 async def test_search():
-    res = await search_tweets("rancher")
+    res = await search("forums")
     assert res
 
 
@@ -25,6 +25,6 @@ def test_get_twitter_handler():
 
 
 def test_get_twitter_search_handler():
-    response = client.get("/twitter/search/?keywords=rancher")
+    response = client.get("/twitter/search/?keywords=forums")
     print(response.text)
     assert response.status_code == 200

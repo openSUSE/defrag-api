@@ -14,41 +14,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import sys
+import os
+import pkgutil
+from collections import Counter
 from typing import List
-from defrag import LOGGER, LOAD
+from defrag import LOGGER, modules
 
+def discover_modules(path: str) -> List[str]:
+    pkgpath = os.path.dirname(path)
+    discovered_modules = [name.lower() for _, name, _ in pkgutil.iter_modules([pkgpath])]
+    duplicates = [name for name, count in Counter(discovered_modules).items() if count > 1]
+    if duplicates:
+        raise Exception(f"Two modules with the same name were declared: {str(duplicates)}")
+    return discovered_modules
 
-def __list_all_modules() -> List[str]:
-    from os.path import dirname, basename, isfile
-    import glob
-
-    # This generates a list of modules in this folder for the * in __main__ to work.
-    mod_paths = glob.glob(dirname(__file__) + "/*.py")
-    all_modules = [
-        basename(f)[:-3]
-        for f in mod_paths
-        if isfile(f) and f.endswith(".py") and not f.endswith("__init__.py")
-    ]
-
-    if LOAD:
-        to_load = LOAD
-        if to_load:
-            if not all(
-                    any(mod == module_name for module_name in all_modules)
-                    for mod in to_load
-            ):
-                LOGGER.error("Invalid loadorder names. Quitting.")
-                sys.exit(1)
-
-        else:
-            to_load = all_modules
-
-        return to_load
-
-    return all_modules
-
-
-ALL_MODULES = sorted(__list_all_modules())
-LOGGER.info("Modules to load: %s", str(ALL_MODULES))
-__all__ = ALL_MODULES + ["ALL_MODULES"]
+ALL_MODULES = sorted(discover_modules(modules.__file__))
+TO_INCLUDE = []
+LOADED = TO_INCLUDE or ALL_MODULES
+LOGGER.info("Modules to load: %s", str(LOADED))

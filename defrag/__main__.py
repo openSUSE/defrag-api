@@ -14,45 +14,35 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from defrag.modules.helpers.requests import Req
+from defrag.modules.helpers.requests import Session
 from defrag.modules.db.redis import RedisPool
+from defrag import app, LOGGER
+from defrag.modules import LOADED
+from defrag.routes import *
+
+from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 import uvicorn
 import importlib
-from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
-from defrag import app, LOGGER
-from defrag.modules import ALL_MODULES
-
-IMPORTED = {}
-
-
-def main() -> None:
-    for module_name in ALL_MODULES:
-        imported_module = importlib.import_module(
-            "defrag.modules." + module_name)
-        if not hasattr(imported_module, "__MOD_NAME__"):
-            imported_module.__MOD_NAME__ = imported_module.__name__
-        LOGGER.debug("Loaded Module {}".format(imported_module.__MOD_NAME__))
-        if not imported_module.__MOD_NAME__.lower() in IMPORTED:
-            IMPORTED[imported_module.__MOD_NAME__.lower()] = imported_module
-        else:
-            # NO_TWO_MODULES
-            raise Exception(
-                "Can't have two modules with the same name! Please change one")
 
 
 @app.on_event("startup")
 async def register_modules_as_services() -> None:
-    """ Registers all modules implementing 'register_service()'. """
+    """ Registers all modules implementing 'register_service() """
+
+    # flushing cache
     with RedisPool() as conn:
         conn.flushall()
-    for service in IMPORTED.values():
-        if hasattr(service, "register_service"):
-            service.register_service()
+
+    # registering
+    for module_name in LOADED:
+        imported_module = importlib.import_module(
+            "defrag.modules." + module_name)
+        LOGGER.debug(f"Imported {imported_module.__name__}.")
 
 
 @app.on_event("shutdown")
 async def close_session() -> None:
-    await Req.close_session()
+    await Session.close()
 
 
 @app.get("/docs", include_in_schema=False)
@@ -66,5 +56,4 @@ def overridden_redoc():
 
 
 if __name__ == "__main__":
-    main()
     uvicorn.run(app, host="0.0.0.0", port=8000)

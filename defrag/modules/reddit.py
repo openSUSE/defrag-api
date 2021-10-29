@@ -1,14 +1,17 @@
+import asyncio
+from asyncio.tasks import Task
 from datetime import datetime
-from defrag.modules.helpers.sync_utils import as_async
-from pydantic.main import BaseModel
-from defrag import LOGGER, app
-from defrag.modules.helpers import CacheQuery, Query, QueryResponse
-from defrag.modules.helpers.requests import Req
-from defrag.modules.helpers.cache_stores import CacheStrategy, QStore, RedisCacheStrategy
-from defrag.modules.helpers.services_manager import Run, ServiceTemplate, ServicesManager
-import atoma
+from dateutil.parser.isoparser import isoparse
+from pottery.deque import RedisDeque
 from typing import Any, Dict, List
 from operator import attrgetter
+import feedparser
+
+from defrag.modules.db.redis import RedisPool
+from defrag.modules.helpers import CacheQuery
+from pydantic.main import BaseModel
+from defrag.modules.helpers.stores import ContainerCfg, Logs, StoreWorkerMixin, BaseStore, WorkerCfg
+from defrag.modules.helpers.sync_utils import as_async
 
 """ INFO
 This module provides a class to query & store recent reddit posts (sent to "r/openSUSE"). 
@@ -21,75 +24,72 @@ to model data answering the question: "What are people talking about recently?"
 __MOD_NAME__ = "reddit"
 
 
-class RedditEntry(BaseModel):
+class RedditPostEntry(BaseModel):
     title: str
-    url: str
+    summary: str
+    published: str
     updated: float
+    link: str
 
 
-class RedditStore(QStore):
-    """
-    Specialization of QStore to handle specifically data by this service / module.
-    """
-
-    @staticmethod
-    async def fetch_items() -> List[RedditEntry]:
-        """ Tries to fetch 25 most recent posts from r/openSUSE and extract title, url
-        and update time in memory """
-        async with Req("https://www.reddit.com/r/openSUSE/.rss") as response:
-            try:
-                if reddit_bytes := await response.read():
-                    feed = atoma.parse_atom_bytes(reddit_bytes)
-                    entries: List[RedditEntry] = [RedditEntry(
-                        title=e.title.value, url=e.links[0].href, updated=datetime.timestamp(e.updated)) for e in feed.entries]
-                    return sorted(entries, key=attrgetter("updated"))
-                else:
-                    raise Exception("Empty results from r/openSUSE")
-            except Exception as err:
-                await as_async(LOGGER.warn)("Unable to fetch r/openSUSE: ", err)
-                return []
-
-    def filter_fresh_items(self, items: List[RedditEntry]) -> List[Dict[str, Any]]:
-        if not items or not self.container:
-            return [i.dict() for i in items]
-        return [i.dict() for i in items if getattr(i, "updated") > self.when_last_update]
+async def parser(ressource_url: str) -> List[RedditPostEntry]:
+    feed = await as_async(feedparser.parse)(ressource_url)
+    parsed = [RedditPostEntry(
+        title=e.title,
+        summary=e.summary,
+        published=e.published,
+        updated=isoparse(e.updated).timestamp(),
+        link=e.link
+    )
+        for e in feed.entries
+    ]
+    return parsed
 
 
-async def search_reddit(keywords: str) -> List[RedditEntry]:
+class RedditStore(StoreWorkerMixin, BaseStore):
 
-    async with Req(f"https://www.reddit.com/r/openSUSE/search.rss", params={"q": keywords, "sort": "relevance", "restrict_sr": 1, "type": "link", "limit": 75}) as response:
-        if reddit_bytes := await response.read():
-            feed = atoma.parse_atom_bytes(reddit_bytes)
-            return [RedditEntry(title=e.title.value, url=e.links[0].href, updated=datetime.timestamp(e.updated)) for e in feed.entries]
-        return []
+    def __init__(self, container_config: ContainerCfg, worker_cfg: WorkerCfg) -> None:
+        self.container: RedisDeque = RedisDeque(
+            key=container_config.redis_key, redis=RedisPool().connection)
+        self.container_config = container_config
+        self.worker_cfg = worker_cfg
+        self.updated_key = container_config.updated_key
+        self.logs = Logs()
+
+    def to_keep(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        def fresher(its): return (
+            i for i in its if i[self.updated_key] > self.logs.last_refresh)
+        if not items or not self.container or not any(fresher(items)):
+            return items
+        return list(fresher(items))
+
+    async def update_with(self, items: List[Dict[str, Any]]) -> None:
+        self.container.extendleft(self.to_keep(items))
+
+    async def fallback(self, cache_query: CacheQuery) -> List[Dict[str, Any]]:
+        await self.refresh()
+        return self.evaluate(cache_query)
+
+    async def warmup(self) -> None:
+        await self.refresh()
+
+    async def refresh(self) -> None:
+        if not self.worker_cfg.worker_fetch_endpoint:
+            raise Exception(
+                "Tried to refresh RedditStore, but no worker_cfg.fetch_endpoint set.")
+        entries = await parser(self.worker_cfg.worker_fetch_endpoint)
+        sorted_entries = sorted(entries, key=attrgetter(self.updated_key))
+        await self.update_with([e.dict() for e in sorted_entries])
+        self.logs.last_refresh = datetime.now().timestamp()
 
 
-def register_service():
-    """ 
-    The idea is that modules are registered against the
-    service manager by calling this function. Can be called from @app.on_event('statupp'
-    for example, or from somewhere else in __main__, or from RedditStore. To be discussed,
-    but it's flexible enough to work with any decision.
-    """
-    name = "reddit"
-    service_key = name + "_default"
-    reddit_strategy = CacheStrategy(
-        RedisCacheStrategy(populate_on_startup=True, auto_refresh=True, auto_refresh_delay=300, runner_timeout=None, cache_decay=None), None)
-    reddit = ServiceTemplate(name=name, cache_strategy=reddit_strategy,
-                             endpoint=None, port=None, credentials=None, custom_parameters=None)
-    service = ServicesManager.realize_service_template(
-        reddit, RedditStore(service_key))
-    ServicesManager.register_service(name, service)
+async def search(keywords: str) -> List[RedditPostEntry]:
+    return await parser(f"https://www.reddit.com/r/openSUSE/search.rss?q={keywords}&sort=relevance&restrict_sr=1&type=link&limit=75")
 
 
-@app.get("/" + __MOD_NAME__ + "/search/")
-async def search(keywords: str) -> QueryResponse:
-    results = await search_reddit(keywords)
-    query = Query(service=__MOD_NAME__)
-    return QueryResponse(query=query, results=results, results_count=len(results))
-
-
-@app.get(f"/{__MOD_NAME__}/")
-async def get_reddit() -> QueryResponse:
-    query = CacheQuery(service="reddit", item_key=None)
-    return await Run.query(query, None)
+def make_store() -> RedditStore:
+    service_key = __MOD_NAME__ + "_default"
+    worker_cfg = WorkerCfg(
+        True, "https://www.reddit.com/r/openSUSE.rss", 900, 30)
+    container_config = ContainerCfg(service_key)
+    return RedditStore(container_config, worker_cfg)

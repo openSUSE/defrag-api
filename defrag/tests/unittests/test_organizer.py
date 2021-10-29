@@ -5,7 +5,8 @@ from itertools import count
 from random import randint
 from typing import Any, Generator, Optional
 from defrag.modules.dispatcher import EmailNotification, Dispatcher
-from defrag.modules.organizer import Calendar, CustomEvent, FedocalEvent, Reminders, FORMAT, Rrule, get_calendar, post_cancel_event, post_events, post_reminders, post_fedocal_events, post_reminders_for
+from defrag.modules.organizer import Calendar, CustomEvent, FedocalEvent, Reminders, FORMAT, Rrule
+from defrag.routes.organizer import get_calendar, cancel_event, add_events, add_reminders, add_fedocal_events, add_reminders_for
 from defrag.modules.organizer import Reminders
 import pytest
 
@@ -66,7 +67,7 @@ async def test_reminders():
     Dispatcher.run(60)
     item = next(reminders_factory())
     item.tgt = datetime.now().strftime(FORMAT)
-    response = await post_reminders(item)
+    response = await add_reminders(item)
     await asyncio.sleep(1)
     assert response
     assert len(Dispatcher.scheduled) == 1
@@ -82,7 +83,7 @@ async def test_add_fedocal_meetings():
     meetings_f, reminders_f = fedocal_meetings_factory(), reminders_factory()
     meetings = [next(meetings_f) for _ in range(0, 3)]
     reminders = next(reminders_f)
-    response = await post_fedocal_events(meetings, reminders)
+    response = await add_fedocal_events(meetings, reminders)
     await asyncio.sleep(1)
     assert response
     assert len(Dispatcher.scheduled) == 3
@@ -98,7 +99,7 @@ async def test_add_meetings():
     meetings_f, reminders_f = meetings_factory(), reminders_factory()
     meetings = [next(meetings_f) for _ in range(0, 3)]
     reminders = next(reminders_f)
-    response = await post_events(meetings, reminders)
+    response = await add_events(meetings, reminders)
     assert response
     assert len(Dispatcher.scheduled) == 3
     Dispatcher.stop()
@@ -113,10 +114,10 @@ async def test_cancel_meeting():
     meetings_f, reminders_f = meetings_factory(), reminders_factory()
     meetings = [next(meetings_f) for _ in range(0, 3)]
     reminders = next(reminders_f)
-    response = await post_events(meetings, reminders)
+    response = await add_events(meetings, reminders)
     print(response)
     cancellable_id = response.results[randint(0, 2)]
-    response = await post_cancel_event(cancellable_id)
+    response = await cancel_event(cancellable_id)
     start, end = "2021-10-10 08:00:00", "2021-12-30 00:00:00"
     res = await get_calendar(start, end)
     Dispatcher.stop()
@@ -131,7 +132,7 @@ async def test_get_calendar():
     meetings_f, reminders_f = meetings_factory(), reminders_factory()
     meetings = [next(meetings_f) for _ in range(0, 3)]
     reminders = next(reminders_f)
-    res = await post_events(meetings, reminders)
+    res = await add_events(meetings, reminders)
     start, end = "2021-10-10 08:00:00", "2021-12-30 00:00:00"
     res = await get_calendar(start, end)
     print(f"The calendar currently holds {res.results_count} items.")
@@ -146,9 +147,9 @@ async def test_set_reminders_for():
     Dispatcher.run(60)
     meeting = next(meetings_factory())
     reminders = next(reminders_factory())
-    response = await post_events([meeting], reminders)
+    response = await add_events([meeting], reminders)
     event_id = response.results[0]
-    res = await post_reminders_for(event_id, reminders)
+    res = await add_reminders_for(event_id, reminders)
     print(f"Results: {res}")
     await asyncio.sleep(1)
     print(f"Dispatched: {Dispatcher.scheduled}")
