@@ -51,6 +51,7 @@ def build(items: List[Dict[str, Any]]) -> Generator[PackageEntry, None, None]:
     names = []
     keys = PackageEntry.__annotations__.keys()
     for i in items:
+        print(i)
         name = i['name']
         if not name in names:
             names.append(name)
@@ -62,13 +63,16 @@ def is_relevant(entry: PackageEntry, home_repos: bool) -> bool:
     if "home:" in entry.project and not home_repos:
         return False
 
+    """
     if any(sub in entry.repository.lower() for sub in ["tumbleweed", "opensuse"]):
         return False
+    """
 
     if ":branches:" in entry.project:
         return False
-
-    if any(sub in entry.name.lower() for sub in ["debuginfo", "debugsource", "buildsymbols", "devel", "lang", "l10n", "trans", "doc", "docs"]):
+    
+    # removed 'devel'
+    if any(sub in entry.name.lower() for sub in ["debuginfo", "debugsource", "buildsymbols", "lang", "l10n", "trans", "doc", "docs"]):
         return False
 
     if entry.arch == "src":
@@ -91,19 +95,22 @@ def to_dict(es: List[PackageEntry]) -> List[Dict[str, str]]:
 
 async def get_package_items(preq: PreparedRequest) -> List[Dict[str, Any]]:
     response = await Session().get(preq.url, auth=BasicAuth(BUGZILLA_USER, BUGZILLA_PASSWORD))
-    if not response.status == 200:
+    if response.status != 200:
         raise Exception(
             f"Server responded with HTTP error code: {response.status}")
     dom = lxml.etree.fromstring(await response.text(), parser=None)
     return [{k: v for k, v in b.items()} for b in dom.xpath("/collection/binary")]
 
 
-async def search(keyword: str, distribution: str, home_repos: bool) -> List[Dict[str, str]]:
+async def search(keyword: str, distribution: str, home_repos: bool, provider: str) -> List[Dict[str, str]]:
     if not distribution.lower() in ["leap", "tumbleweed"]:
         raise Exception(f"Invalid distribution name {distribution}")
+    if not provider.lower() in ["opi", "osc"]:
+        raise Exception(f"Invalid provider name {provider}")
     distribution = "openSUSE:Factory" if distribution == "tumbleweed" else "openSUSE:Leap:15.3"
+    provider = "https://api.opensuse.org" if provider == "opi" else "https://pmbs.links2linux.de"
     q = OS_API_QUERY(
-        "https://api.opensuse.org",
+        provider,
         "/search/published/binary/id",
         distribution,
         keyword

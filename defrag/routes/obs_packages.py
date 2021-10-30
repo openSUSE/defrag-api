@@ -10,7 +10,7 @@ __ENDPOINT_NAME__ = "obs_packages"
 
 @router.get("/" + __ENDPOINT_NAME__ + "/search/{distribution}")
 @Memo_Redis.install_decorator("/" + __ENDPOINT_NAME__ + "/search/")
-async def api_search(keywords: str, distribution: str, home_repos: bool = False) -> QueryResponse:
+async def api_search(keywords: str, distribution: str, home_repos: bool = False, provider: str = "opi") -> QueryResponse:
     query = Query(service=__ENDPOINT_NAME__)
-    res = await search(keywords, distribution, home_repos)
+    res = await search(keywords, distribution, home_repos, provider)
     return QueryResponse(query=query, results=res, results_count=len(res))
