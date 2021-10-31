@@ -12,8 +12,8 @@ class Session:
             await cls.client.close()
             cls.client = None
 
-    def __new__(self) -> ClientSession:
-        if not self.client or self.client.closed:
-            self.client = ClientSession(trust_env=True)
-        return self.client
+    def __new__(cls) -> ClientSession:
+        if not cls.client or cls.client.closed:
+            cls.client = ClientSession(trust_env=True)
+        return cls.client
     

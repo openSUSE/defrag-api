@@ -51,7 +51,6 @@ def build(items: List[Dict[str, Any]]) -> Generator[PackageEntry, None, None]:
     names = []
     keys = PackageEntry.__annotations__.keys()
     for i in items:
-        print(i)
         name = i['name']
         if not name in names:
             names.append(name)
@@ -100,7 +99,7 @@ async def get_package_items(preq: PreparedRequest) -> List[Dict[str, Any]]:
             f"Server responded with HTTP error code: {response.status}")
     dom = lxml.etree.fromstring(await response.text(), parser=None)
     return [{k: v for k, v in b.items()} for b in dom.xpath("/collection/binary")]
-
+    
 
 async def search(keyword: str, distribution: str, home_repos: bool, provider: str) -> List[Dict[str, str]]:
     if not distribution.lower() in ["leap", "tumbleweed"]:

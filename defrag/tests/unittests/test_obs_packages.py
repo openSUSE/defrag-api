@@ -9,6 +9,11 @@ def test_api_os():
     assert response.status_code == 200
     print(response.json())
 """
+
+# running the tests separately has them pass; running them in a sequence has the second one fail.
+# I have no idea how to fix this.
+
+
 def test_api_os2():
     response = client.get("/obs_packages/search/tumbleweed?keywords=spotify-qt&home_repos=true")
     assert response.status_code == 200
