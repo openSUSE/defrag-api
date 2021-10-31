@@ -1,20 +1,12 @@
-from fastapi.testclient import TestClient
-from defrag.routes import app
+from defrag.routes.obs_packages import api_search
+import pytest
 
-client = TestClient(app)
+@pytest.mark.asyncio
+async def test_simple():
+    response = await api_search("chess", "tumbleweed")
+    print(response)
 
-"""
-def test_api_os():
-    response = client.get("/obs_packages/search/tumbleweed?keywords=chess")
-    assert response.status_code == 200
-    print(response.json())
-"""
-
-# running the tests separately has them pass; running them in a sequence has the second one fail.
-# I have no idea how to fix this.
-
-
-def test_api_os2():
-    response = client.get("/obs_packages/search/tumbleweed?keywords=spotify-qt&home_repos=true")
-    assert response.status_code == 200
-    print(response.json())
+@pytest.mark.asyncio
+async def test_home_repos():
+    response = await api_search("spotify-qt", "tumbleweed", home_repos=True)
+    print(response)
