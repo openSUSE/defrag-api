@@ -1,12 +1,15 @@
 from asyncio.tasks import Task, wait_for
+from dataclasses import field
 from datetime import datetime
 from pottery import RedisSet, RedisDict, RedisDeque
 from pydantic import BaseModel
-from typing import Any, Dict, List, Optional, Union
+from functools import partial
+from typing import Any, Coroutine, Dict, Generator, List, Optional, Tuple, Union
 import asyncio
 
 from defrag import LOGGER
 from defrag.modules.db.redis import RedisPool
+from defrag.modules.helpers.data_manipulation import schedule_fairly
 from defrag.modules.helpers.requests import Session
 from defrag.modules.helpers.sync_utils import as_async, run_redis_jobs
 
@@ -37,17 +40,15 @@ class TelegramNotification(Notification):
 class Dispatchable(BaseModel):
     origin: str
     notification: Notification
-    id: Optional[int] = None
     retries: int = 0
     schedules: List[float] = []
-
+    id: Optional[int] = None
 
 class HashedDispatchable(Dispatchable):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if not hasattr(super(), "id") or not super().id:
-            self.id = hash(datetime.now().timestamp())
+        self.id = abs(hash(datetime.now().timestamp()))
         self.schedules = sorted(self.schedules, reverse=True)
 
 
@@ -83,19 +84,17 @@ class Dispatcher:
     due_last_poll: Optional[float] = None
 
     @classmethod
-    def run(cls, seconds: int = 60) -> None:
+    def run(cls, seconds: int = 60, dry_run=False) -> None:
         """ 
         Initializes the queue and launch the two consumers. 
         This is made sync to make it easier to use in any context.
         """
         cls.process_q = asyncio.Queue()
         # schedules a task to consume all dispatchables, as they come
-        cls.running_workers["processor"] = asyncio.create_task(
-            cls.start_polling_process())
+        cls.running_workers["processor"] = asyncio.create_task(cls.start_polling_process())
         # schedules a task to consume all and only the 'schedulable' dispatchables,
         # typically calendar notifications, at a  set interval. 1 minute looks OK.
-        cls.running_workers["clock"] = asyncio.create_task(
-            cls.start_ticking_clock(seconds))
+        cls.running_workers["clock"] = asyncio.create_task(cls.start_ticking_clock(seconds, dry_run))
 
     @classmethod
     def stop(cls) -> None:
@@ -103,7 +102,7 @@ class Dispatcher:
             t.cancel()
 
     @classmethod
-    async def put(cls, dispatchable: Union[Dispatchable, Dict[str, Any]]) -> None:
+    async def put(cls, dispatchable: Union[Dispatchable, Dict[str, Any]]) -> int:
         """ 
         Ensures that the input is a unique dispatchable and puts it into the queue.
         Performance may favor a different way of unpacking the inner dispatchable.
@@ -111,115 +110,128 @@ class Dispatcher:
         item = HashedDispatchable(
             **dispatchable.dict()
         ).dict() if isinstance(dispatchable, Dispatchable) else dispatchable
+        
         if not "id" in item or not item['id']:
             raise Exception("Cannot process items without id!")
-        await cls.process_q.put(item)
+        
+        cls.process_q.put_nowait(item)
+        return item["id"]
 
     @classmethod
     async def start_polling_process(cls) -> None:
         """
-        Dispatches the item just in case it is not a scheduled item. Otherwise 
-        adds to the scheduled items, if its id is not already keyed in the scheduled dict.
+        Keeps polling 'process_q'.
         """
-        await as_async(LOGGER.info)("Started to poll the process queue.")
+        LOGGER.info("Started to poll the process queue.")
         while True:
+            
             item = await cls.process_q.get()
+            
             if not item["schedules"]:
-                await cls.dispatch(item)
-            elif not item["id"] in cls.scheduled:
-                cls.scheduled[item["id"]] = item
+                raise Exception(f"Nothing to schedule on {item}!")
+            
+            cls.scheduled[item["id"]] = item 
             cls.process_q.task_done()
 
     @classmethod
-    async def start_ticking_clock(cls, interval: int) -> None:
+    async def start_ticking_clock(cls, interval: int, dry_run: bool) -> None:
         """ 
-        Every {interval}, monitor the scheduled set for due items.
-        Looks for the last 'schedule' occurrence (i.e. a particular notification 
-        and dispatches it. Notice that this behaviour assumes that the interval between 'schedules'
-        is not smaller than the interval of 'start_ticking_clock'.
+        On set interval, keep monitoring the 'scheduled' RedisSet.
+        Captures and sends items due for dispatching.
         """
-        await as_async(LOGGER.info)("Started to monitor scheduled items")
+        def is_due(float_sched: float) -> bool: 
+            return float_sched < datetime.now().timestamp()
+            
         while True:
-            await asyncio.sleep(interval)
-            now_timestamp = datetime.now().timestamp()
-            due = [v for v in cls.scheduled.values() if v["schedules"]
-                   [-1] < now_timestamp]
-            if due:
-                await wait_for(cls.dispatch(due), timeout=3)
+            await asyncio.sleep(3 if dry_run else interval)
+            
+            due = schedule_fairly(cls.scheduled, key="schedules", filt=is_due)
+            await cls.dispatch(due)
+            
+            if dry_run:
+                break
 
     @classmethod
     async def unschedule(cls, item_id: str) -> None:
         """ Unschedule (marks for cancellation) a scheduled items. """
         found = [k for k in cls.scheduled.keys() if k == item_id]
+        
         if found:
             await as_async(cls.unscheduled_items_ids.add)(item_id)
 
     @classmethod
-    async def dispatch(cls, items: List[Dict[str, Any]]) -> None:
+    async def dispatch(cls, sched: Generator[Tuple[str, float], None, None]) -> None:
         """
         The dispatcher looks up the 'unscheduled' set, to see if the item being processed is found there. 
-        If found, the item is removed from the set and discarded. 
-        If not found, the item is has its notification payload either added to a queue available for external applications to poll, or tried for push/sending.
-        If the push/sending fails, the item is sent to the queue again unless it has been retried 3 times already (discarded if so). 
-        If the sending succeeds, the item is rescheduled if it has remaining scheduled times. Otherwise it is removed from the the scheduled items.
+        - if found, the item is removed from the set and discarded. 
+        - if not found, the item is has its notification payload either added to a queue available for external applications to poll, or tried for push/sending.
+        - if the push/sending fails, the item is sent to the queue again unless it has been retried 3 times already (discarded if so). 
+        - if the sending succeeds, the item is rescheduled if it has remaining scheduled times. Otherwise it is removed from the the scheduled items.
         """
-        await as_async(LOGGER.info)(f"Called dispatch with {len(items)}")
-        now_tmp = datetime.now().timestamp()
-        to_push = []
-        redis_jobs = []
+        to_send: List[Coroutine] = []
+        redis_jobs: List[partial] = []
 
-        def deleting(id: int) -> None:
+        def deleting_key(id: int) -> None:
             cls.scheduled.__delitem__(id)
-            #LOGGER.info(f"Deleting {id}")
+            LOGGER.info(f"Deleting {id}")
 
-        def removing(id: int) -> None:
+        def removing_from_unscheduled(id: int) -> None:
             cls.unscheduled_items_ids.remove(id)
-            deleting(id)
-            #LOGGER.info(f"Removing {id}")
+            deleting_key(id)
+            LOGGER.info(f"Removing {id}")
 
         def polling(item: Dict[str, Any]) -> None:
-            item["notification"]["dispatched"] = now_tmp
+            item["notification"]["dispatched"] = datetime.now().timestamp()
             cls.due_for_polling_notifications.appendleft(item)
-            #LOGGER.info(f"Polling {item}")
+            LOGGER.info(f"Polling {item}")
 
-        def rescheduling(item: Dict[str, Any]) -> None:
-            cls.scheduled[item["id"]] = item
-            #LOGGER.info(f"Scheduling {item}")
+        """ Dispatching function calls for handling schedules. """
+        
+        for k, _ in sched:
+            item: Dict[str, Any] = cls.scheduled[k]
 
-        for i in items:
-            if i["id"] in cls.unscheduled_items_ids:
-                redis_jobs.append(lambda: removing(i["id"]))
-                #LOGGER.info(f"To remove {i['id']}")
+            if k in cls.unscheduled_items_ids:
+                redis_jobs.append(partial(removing_from_unscheduled, item["id"]))
+                LOGGER.info(f"To remove {item['id']}")
 
-            if i["notification"]["poll_do_not_push"]:
-                redis_jobs.append(lambda: polling(i))
-                #LOGGER.info(f"To poll {i}")
+            if item["notification"]["poll_do_not_push"]:
+                redis_jobs.append(partial(polling, item))
+                LOGGER.info(f"To poll {item}")
+            
+            else:
+                to_send.append(cls.send(item))
+                LOGGER.info(f"To send {item}")
+        
+        """ Running all tasks involving a network request (pushing). """
+        
+        for task in asyncio.as_completed(to_send):
+            response = await task
+            item = response["item"]
+            
+            if response["status_code"] != 200:
+
+                if response["item"]["retries"] < 2:
+                    await as_async(LOGGER.warning)(f"item sending timed out. Retrying soon.")
+                    item["retries"] += 1
+                    await cls.put(item)
+
+                else:
+                    LOGGER.warning(
+                        f"Dropping notification {item['notification']} after 3 unsuccessful retries: {item}")
 
             else:
-                to_push.append(cls.push(i))
-                #LOGGER.info(f"To push {i}")
-
-            if i["schedules"]:
-                i["schedules"].pop()
-            if not i["schedules"]:
-                redis_jobs.append(lambda: deleting(i["id"]))
-                #LOGGER.info(f"To delete {i['id']}")
-
-            else:
-                redis_jobs.append(lambda: rescheduling(i))
-
-        for res in asyncio.as_completed(to_push):
-            response = await res
-            i = response["item"]
-            if cls.has_toretry(response):
-                await as_async(LOGGER.warning)(f"item sending timed out. Retrying soon.")
-                i["retries"] += 1
-                await cls.put(i)
-            else:
-                LOGGER.warning(
-                    f"Dropping notification {i['notification']} after 3 unsuccessful retries: {i}")
-
-        await as_async(run_redis_jobs)(redis_jobs)
+            
+                """ On a successful network request, we remove the schedules. """
+                def pop_remove():
+                    item["schedules"].pop()
+                    if not item["schedules"]:
+                        LOGGER.info(f"To delete {item['id']}")
+                        deleting_key(item["id"])
+                
+                redis_jobs.append(partial(pop_remove))
+        
+        asyncio.create_task(run_redis_jobs(redis_jobs))
+        
 
     @classmethod
     async def poll_due(cls, sync: bool) -> List[Dict[Any, str]]:
@@ -233,21 +245,17 @@ class Dispatcher:
         def pred(
             item): return item["notification"]["dispatched"] > cls.due_last_poll
         slice = [e for e in cls.due_for_polling_notifications if pred(e)]
-        removing_all_due = (
-            cls.due_for_polling_notifications.pop for _ in slice)
-        await as_async(run_redis_jobs)(removing_all_due)
+        removing_all_due = [
+            partial(cls.due_for_polling_notifications.pop) for _ in slice]
+        await run_redis_jobs(removing_all_due)
         cls.due_last_poll = datetime.now().timestamp()
         return list(slice)
 
     @staticmethod
-    async def push(item: Dict[str, Any], testing: bool = True) -> Dict[str, Any]:
+    async def send(item: Dict[str, Any], testing: bool = True) -> Dict[str, Any]:
         """ Sends a dispatched dispatchable to its final destination. """
         if not testing:
             if data := item["requests_options"]["data"]:
                 response = await Session().get(item["requests_options"]["url"], json=data)
                 return {"status": response.status, "item": item}
         return {"status_code": 200, "item": item}
-
-    @staticmethod
-    def has_toretry(response: Dict[str, Any]) -> bool:
-        return response["status_code"] != 200 and response["item"]["retries"] < 3

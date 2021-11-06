@@ -1,5 +1,4 @@
-from collections import deque
-from defrag.modules.helpers.data_manipulation import compose, find_first, make_xform, make_transducer, base_step, filter_count_sort
+from defrag.modules.helpers.data_manipulation import compose, make_xform, make_transducer, base_step, schedule_fairly
 from random import randint
 
 def test_compose():
@@ -34,31 +33,6 @@ def test_make_transducer():
     res = transducer([0, 1, 2, 3, 4])
     assert res == ["1", "2"]
 
-
-def test_find_first():
-    l = deque(sorted([1, 2, 5, 10, 3, 8, 4, 7, 5, 9, 2]))
-    to_insert = 6
-    def relation(item, origin): return origin < item
-    index = find_first(l, relation, to_insert)
-    l.insert(index, 6)
-    assert l == deque([1, 2, 2, 3, 4, 5, 5, 6, 7, 8, 9, 10])
-    m = deque([7])
-    n = deque([5])
-    index = find_first(m, relation, to_insert)
-    m.insert(index, to_insert)
-    assert m == deque([6, 7])
-    index = find_first(m, relation, to_insert)
-    n.insert(index, to_insert)
-    assert n == deque([5, 6])
-    to_insert = randint(0, 10000000)
-    large = deque([x for x in range (0, 10000000)])
-    index = find_first(large, relation, to_insert)
-    d1 = len(large)
-    large.insert(index, to_insert)
-    d2 = len(large)
-    assert d1 == d2-1  
-
-def test_filter_count_sort():
-    l = [1,2,3,4,5,6,7,8,9,10]
-    assert filter_count_sort(l, lambda x: x > 5, 4, reverse=True) == [9,8,7,6]
-
+def test_schedule_fairly():
+    res = schedule_fairly({"a": {"schedules": [3,2,1] }, "b": { "schedules": [4,1]}, "c": { "schedules": [5]}}, "schedules", lambda x: x > 2)
+    assert list(res) == [('c', 5),('b', 4),('a', 3)]

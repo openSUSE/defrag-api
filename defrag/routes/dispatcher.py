@@ -2,7 +2,7 @@ from typing import Optional
 from fastapi import APIRouter
 
 
-from defrag.modules.dispatcher import Dispatcher
+from defrag.modules.helpers.dispatcher import Dispatcher
 from defrag.modules.helpers import Query, QueryResponse
 
 router = APIRouter()

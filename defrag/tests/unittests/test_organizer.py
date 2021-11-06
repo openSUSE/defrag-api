@@ -4,7 +4,7 @@ from defrag.modules.db.redis import RedisPool
 from itertools import count
 from random import randint
 from typing import Any, Generator, Optional
-from defrag.modules.dispatcher import EmailNotification, Dispatcher
+from defrag.modules.helpers.dispatcher import EmailNotification, Dispatcher
 from defrag.modules.organizer import Calendar, CustomEvent, FedocalEvent, Reminders, FORMAT, Rrule
 from defrag.routes.organizer import get_calendar, cancel_event, add_events, add_reminders, add_fedocal_events, add_reminders_for
 from defrag.modules.organizer import Reminders

@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from defrag.modules.helpers.sync_utils import as_async
 from defrag.modules.db.redis import RedisPool
 from defrag.modules.helpers import EitherErrorOrOk, FailuresAndSuccesses
-from defrag.modules.dispatcher import Dispatcher, Dispatchable, Notification, TelegramNotification
+from defrag.modules.helpers.dispatcher import Dispatcher, Dispatchable, Notification, TelegramNotification
 from pottery import RedisDict
 from typing import Any, Dict, List, Optional, Tuple
 from dateutil import rrule

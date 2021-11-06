@@ -1,6 +1,6 @@
 from defrag.modules.db.redis import RedisPool
 from defrag import app
-from defrag.modules.dispatcher import Dispatcher, Dispatchable, EmailNotification
+from defrag.modules.helpers.dispatcher import Dispatcher, Dispatchable, EmailNotification
 from fastapi.testclient import TestClient
 from datetime import datetime, timedelta
 import pytest
@@ -16,16 +16,17 @@ async def test_Dispatcher():
     now = datetime.now()
     notification = EmailNotification(
         poll_do_not_push=True, body="some contents", email_address="to someone", email_object="about something")
-    schedules = [(now + timedelta(seconds=n)).timestamp() for n in range(1, 4)]
+    schedules = [(now + timedelta(seconds=n)).timestamp() for n in range(3)]
     dispatchables = [Dispatchable(
         id=k, origin="test client", notification=notification, schedules=[s]) for k, s in enumerate(schedules)]
-    Dispatcher.run(seconds=1)
+    Dispatcher.run(dry_run=True)
     await asyncio.gather(*[Dispatcher.put(d) for d in dispatchables])
-    await asyncio.sleep(5)
+    await asyncio.sleep(6)
     print(
         f"Scheduled: {len(Dispatcher.scheduled)}, Available for polling: {len(Dispatcher.due_for_polling_notifications)}")
-    assert len(Dispatcher.due_for_polling_notifications) == 3
-    assert not Dispatcher.scheduled
+    assert len(Dispatcher.due_for_polling_notifications) == len(
+        Dispatcher.scheduled) == 3
+
 
 @pytest.mark.asyncio
 async def test_poll_due():
@@ -43,5 +44,4 @@ async def test_poll_due():
     Dispatcher.due_for_polling_notifications.extendleft(notifiers)
     Dispatcher.due_last_poll = yesterday
     polled = await Dispatcher.poll_due(True)
-    print(list(Dispatcher.due_for_polling_notifications))
     assert len(polled) == len(notifiers)

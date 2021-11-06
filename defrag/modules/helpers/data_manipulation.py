@@ -16,11 +16,15 @@
 
 from functools import reduce
 from itertools import islice
-from typing import Any, Callable, Iterable, List, Optional, Tuple
+from typing import Any, Callable, Deque, Dict, Generator, Iterable, List, Optional, Tuple
+
+from pottery.dict import RedisDict
 
 """
-Some utilities for doing data manipulation.
+Utilities for data manipulation.
 """
+
+# Base
 
 
 def compose(*funcs: Tuple[Callable]) -> Callable:
@@ -31,6 +35,9 @@ def compose(*funcs: Tuple[Callable]) -> Callable:
     def inner(seed):
         return reduce(step, funcs, seed)
     return inner
+
+
+# Clojure-style transducers
 
 
 def base_step(acc, val):
@@ -50,6 +57,9 @@ def make_transducer(xform: Callable, step: Callable, folder: List[Any] = []) -> 
     return transducer
 
 
+# Special reducers
+
+
 def partition_left_right(xs: Iterable, predicate: Callable) -> Tuple[List[Any], List[Any]]:
     def reducer(acc, val):
         left, right = acc
@@ -61,36 +71,69 @@ def partition_left_right(xs: Iterable, predicate: Callable) -> Tuple[List[Any], 
     return reduce(reducer, xs, ([], []))
 
 
-def find_first_nogen(it: Iterable, relation: Callable[[Any, Any], bool], origin: Any) -> int:
-    if not it:
+# Operations on Deque
+
+
+def find_index(n: int, q: Deque) -> int:
+    """
+    Assuming the container is a inverse partial order.
+    If the ordered things are timestamps in descending order:
+    [ m = remote future, m - k = close future, n < m = soon ... ]
+    'find_index' corresponds to 'find next timestamp'.
+    """
+    if not q:
         return 0
-    for i, e in enumerate(it):
-        if relation(e, origin):
-            return i
-    return -1
-
-
-def find_first(it: Iterable, relation: Callable[[Any, Any], bool], origin: Any) -> int:
-    if not it:
+    left, right = q[0], q[-1]
+    if n > left:
         return 0
+    if n < right:
+        return -1
+    counter = 0
+    for x in reversed(q):
+        if n >= x:
+            break
+        counter += 1
+    return counter
 
-    def gen():
-        for i, e in enumerate(it):
-            if relation(e, origin):
-                yield i
-                return
-    for res in gen():
-        return res
-    return -1
+
+def insert_one(n: int, q: Deque) -> Deque:
+    i = find_index(n, q)
+    if i == 0:
+        q.appendleft(n)
+    elif i == -1:
+        q.append(n)
+    else:
+        q.insert(i, n)
+    return q
 
 
-def filter_count_sort(
-    it: Iterable[Any],
-    filter_pred: Optional[Callable[[Any], bool]] = None,
-    count: Optional[int] = None,
-    sort_pred: Optional[Callable[[Any], bool]] = None,
-    reverse: bool = False
-) -> List[Any]:
-    filtered = (x for x in it if filter_pred(x)) if filter_pred else (x for x in it)
-    counted = (x for x in islice(filtered, count)) if count else filtered
-    return sorted(counted, key=lambda item: sort_pred(item), reverse=reverse) if sort_pred else sorted(counted, reverse=reverse)
+def insert_many(l: List[int], q: Deque) -> Deque:
+    if l:
+        return insert_many(l, insert_one(l.pop(), q))
+    return q
+
+
+def schedule_fairly(
+    due, 
+    key: str,
+    filt: Callable[[Any], bool]
+) -> Generator[Tuple[str, float], None, None]:
+    """
+    Assuming 'due: Dic[int, Dict[str, Any]]',
+    where one of the Any is List[float] encoding timestamps for the Dict[str, Any] event to which they belong,
+    this generator functions yields all timestamps satisfying the 'filt' predicate
+    in a "fair" round-robin order.
+    """
+    if not isinstance(due, RedisDict) and not isinstance(due, Dict):
+        raise Exception("Cannot schedule_farily from non Redict object")
+    pipes = {k: (sched for sched in reversed(item[key])) for k, item in due.items()}
+    keys = list(pipes.keys())
+    index = 0
+    while keys:
+        try:
+            index = index + 1 if index < len(keys) - 1 else 0
+            val = next(pipes[keys[index]])
+            if filt(val):
+                yield (keys[index], val)
+        except StopIteration:
+            keys.remove(keys[index])
