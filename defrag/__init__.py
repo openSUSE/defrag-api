@@ -51,6 +51,3 @@ if not config:
 
 # Initialize app
 app = FastAPI(docs_url=None, redoc_url=None)
-
-def run() -> None:
-    pass
