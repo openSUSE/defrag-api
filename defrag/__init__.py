@@ -14,12 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import logging
 from fastapi import FastAPI
-from pathlib import Path
+from dotenv import dotenv_values
+import logging
 import configparser
-import os
-
 
 LOGGER = logging.getLogger(__name__)
 # TODO: Change the logformat so that it fits uvicorn
@@ -36,21 +34,9 @@ else:
 
 LOAD = []
 
-user_env = Path(".env")
-has_env = user_env.is_file() or bool(os.environ.get('ENV', False))
+config = dotenv_values(".env")
 
-if has_env:
-    REDIS_HOST = os.environ.get("REDIS_HOST", None)
-    REDIS_PORT = int(os.environ.get("REDIS_PORT", None))
-    REDIS_PWD = os.environ.get("REDIS_PWD", None)
-    BUGZILLA_USER = os.environ.get("BUGZILLA_USER", None)
-    BUGZILLA_PASSWORD = os.environ.get("BUGZILLA_PASSWORD", None)
-    TWITTER_CONSUMER_KEY = os.environ.get("TWITTER_CONSUMER_KEY", None)
-    TWITTER_CONSUMER_SECRET = os.environ.get("TWITTER_CONSUMER_SECRET", None)
-    TWITTER_ACCESS_TOKEN = os.environ.get("TWITTER_ACCESS_TOKEN", None)
-    TWITTER_ACCESS_TOKEN_SECRET = os.environ.get(
-        "TWITTER_ACCESS_TOKEN_SECRET", None)
-else:
+if not config:
     config = configparser.ConfigParser()
     config.read(["config.ini", "opengm.ini", "opensuse.ini"])
     REDIS_HOST = config["REDIS"]["REDIS_HOST"] 
@@ -65,6 +51,3 @@ else:
 
 # Initialize app
 app = FastAPI(docs_url=None, redoc_url=None)
-
-def run() -> None:
-    pass
