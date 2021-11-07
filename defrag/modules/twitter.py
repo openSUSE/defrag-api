@@ -1,7 +1,7 @@
 from datetime import datetime
 from pydantic.main import BaseModel
 from defrag.modules.helpers import CacheQuery, Query, QueryResponse
-from defrag import LOGGER, app, TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET
+from defrag import LOGGER, app, config
 from defrag.modules.helpers.cache_stores import CacheStrategy, QStore, RedisCacheStrategy
 from defrag.modules.helpers.sync_utils import as_async
 from defrag.modules.helpers.services_manager import Run, ServiceTemplate, ServicesManager
@@ -21,8 +21,8 @@ to model data answering the question: "What are people talking about recently?"
 __MOD_NAME__ = "twitter"
 
 
-api = twitter.Api(consumer_key=TWITTER_CONSUMER_KEY, consumer_secret=TWITTER_CONSUMER_SECRET,
-                  access_token_key=TWITTER_ACCESS_TOKEN, access_token_secret=TWITTER_ACCESS_TOKEN_SECRET)
+api = twitter.Api(consumer_key=config["TWITTER_CONSUMER_KEY"], consumer_secret=config["TWITTER_CONSUMER_SECRET"],
+                  access_token_key=config["TWITTER_ACCESS_TOKEN"], access_token_secret=config["TWITTER_ACCESS_TOKEN_SECRET"])
 
 
 class TwitterEntry(BaseModel):
