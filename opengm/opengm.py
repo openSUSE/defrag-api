@@ -1,8 +1,8 @@
+from functools import partial
 from typing import Any, List, Tuple
 
 from pyrogram import Client, __version__, filters
 from pyrogram.types import Message
-from functools import partial
 
 command = partial(filters.command, prefixes="/")
 

@@ -1,15 +1,20 @@
-from typing import Optional
 from functools import wraps
-from pyrogram import Client
-from pyrogram.types import Message, Chat
-from opengm import redis
+from typing import Optional
+
 from pottery import RedisDict
+from pyrogram import Client
+from pyrogram.types import Chat, Message
+
+from opengm import redis
+
 #from opengm.plugins.base import reload_admins
 admins = RedisDict({}, redis=redis, key="chat_admins")
 # {chat_id: [user_id, user_id]}
 
+
 async def can_delete(chat: Chat, bot: Client) -> bool:
     return (await bot.get_chat_member(chat.id, (await bot.get_me()).id)).can_delete_messages
+
 
 def user_admin(func):
     @wraps(func)
@@ -19,8 +24,8 @@ def user_admin(func):
         user = message.from_user
         if not user:
             pass
-        #if not message.chat.id in admins:
-        #    await reload_admins(message.chat.id, cl) 
+        # if not message.chat.id in admins:
+        #    await reload_admins(message.chat.id, cl)
         if user.id in admins[message.chat.id]:
             return await func(cl, message, *args, **kwargs)
         else:

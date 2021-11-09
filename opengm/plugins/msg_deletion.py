@@ -1,17 +1,20 @@
-from opengm.utils.plugins import register_plugin
-from pyrogram import filters, Client
-from pyrogram.types import Message
-from pyrogram.errors.exceptions.forbidden_403 import MessageDeleteForbidden
-from opengm.utils.chat_status import user_admin, can_delete
-from opengm.utils.commands import get_args
-from opengm.opengm import Opengm
 from asyncio import sleep
+
+from pyrogram import Client, filters
+from pyrogram.errors.exceptions.forbidden_403 import MessageDeleteForbidden
+from pyrogram.types import Message
+
+from opengm.opengm import Opengm
+from opengm.utils.chat_status import can_delete, user_admin
+from opengm.utils.commands import get_args
+from opengm.utils.plugins import register_plugin
 
 HELP = """
 - /purge: Remove messages
 - /del: remove one message
 """
 register_plugin("Message deletion", HELP)
+
 
 @Opengm.on_message(filters.command("del"))
 @user_admin
@@ -24,6 +27,7 @@ async def delete_message(bot: Client, msg: Message):
             await msg.reply_text("I don't have delete rights!")
     else:
         await msg.reply_text("Whadya want to delete?")
+
 
 @Opengm.on_message(filters.command(["purge", "p"]))
 @user_admin
@@ -49,7 +53,8 @@ async def purge(bot: Client, msg: Message):
         msgs = []
         count = 0
         error = False
-        for m_id in range(delete_to, message_id - 1, -1):  # Reverse iteration over message ids
+        for m_id in range(
+                delete_to, message_id - 1, -1):  # Reverse iteration over message ids
             msgs.append(m_id)
             count = count + 1
             if len(msgs) == 100:
