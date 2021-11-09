@@ -44,6 +44,7 @@ class Dispatchable(BaseModel):
     schedules: List[float] = []
     id: Optional[int] = None
 
+
 class HashedDispatchable(Dispatchable):
 
     def __init__(self, *args, **kwargs):
@@ -91,15 +92,19 @@ class Dispatcher:
         """
         cls.process_q = asyncio.Queue()
         # schedules a task to consume all dispatchables, as they come
-        cls.running_workers["processor"] = asyncio.create_task(cls.start_polling_process())
+        cls.running_workers["processor"] = asyncio.create_task(
+            cls.start_polling_process())
         # schedules a task to consume all and only the 'schedulable' dispatchables,
         # typically calendar notifications, at a  set interval. 1 minute looks OK.
-        cls.running_workers["clock"] = asyncio.create_task(cls.start_ticking_clock(seconds, dry_run))
+        cls.running_workers["clock"] = asyncio.create_task(
+            cls.start_ticking_clock(seconds, dry_run))
 
     @classmethod
     def stop(cls) -> None:
         for t in cls.running_workers.values():
             t.cancel()
+        if any(not t.cancelled for t in cls.running_workers.values()):
+            raise Exception(f"Failed to cancel the handler for some worker")
 
     @classmethod
     async def put(cls, dispatchable: Union[Dispatchable, Dict[str, Any]]) -> int:
@@ -110,10 +115,10 @@ class Dispatcher:
         item = HashedDispatchable(
             **dispatchable.dict()
         ).dict() if isinstance(dispatchable, Dispatchable) else dispatchable
-        
+
         if not "id" in item or not item['id']:
             raise Exception("Cannot process items without id!")
-        
+
         cls.process_q.put_nowait(item)
         return item["id"]
 
@@ -124,13 +129,12 @@ class Dispatcher:
         """
         LOGGER.info("Started to poll the process queue.")
         while True:
-            
             item = await cls.process_q.get()
-            
+
             if not item["schedules"]:
                 raise Exception(f"Nothing to schedule on {item}!")
-            
-            cls.scheduled[item["id"]] = item 
+
+            cls.scheduled[item["id"]] = item
             cls.process_q.task_done()
 
     @classmethod
@@ -139,15 +143,16 @@ class Dispatcher:
         On set interval, keep monitoring the 'scheduled' RedisSet.
         Captures and sends items due for dispatching.
         """
-        def is_due(float_sched: float) -> bool: 
+        def is_due(float_sched: float) -> bool:
             return float_sched < datetime.now().timestamp()
-            
+        LOGGER.info("Started to poll the 'scheduled' set.")
+
         while True:
             await asyncio.sleep(3 if dry_run else interval)
-            
+
             due = schedule_fairly(cls.scheduled, key="schedules", filt=is_due)
             await cls.dispatch(due)
-            
+
             if dry_run:
                 break
 
@@ -155,7 +160,7 @@ class Dispatcher:
     async def unschedule(cls, item_id: str) -> None:
         """ Unschedule (marks for cancellation) a scheduled items. """
         found = [k for k in cls.scheduled.keys() if k == item_id]
-        
+
         if found:
             await as_async(cls.unscheduled_items_ids.add)(item_id)
 
@@ -186,28 +191,29 @@ class Dispatcher:
             LOGGER.info(f"Polling {item}")
 
         """ Dispatching function calls for handling schedules. """
-        
+
         for k, _ in sched:
             item: Dict[str, Any] = cls.scheduled[k]
 
             if k in cls.unscheduled_items_ids:
-                redis_jobs.append(partial(removing_from_unscheduled, item["id"]))
+                redis_jobs.append(
+                    partial(removing_from_unscheduled, item["id"]))
                 LOGGER.info(f"To remove {item['id']}")
 
             if item["notification"]["poll_do_not_push"]:
                 redis_jobs.append(partial(polling, item))
                 LOGGER.info(f"To poll {item}")
-            
+
             else:
                 to_send.append(cls.send(item))
                 LOGGER.info(f"To send {item}")
-        
+
         """ Running all tasks involving a network request (pushing). """
-        
+
         for task in asyncio.as_completed(to_send):
             response = await task
             item = response["item"]
-            
+
             if response["status_code"] != 200:
 
                 if response["item"]["retries"] < 2:
@@ -220,18 +226,17 @@ class Dispatcher:
                         f"Dropping notification {item['notification']} after 3 unsuccessful retries: {item}")
 
             else:
-            
+
                 """ On a successful network request, we remove the schedules. """
                 def pop_remove():
                     item["schedules"].pop()
                     if not item["schedules"]:
                         LOGGER.info(f"To delete {item['id']}")
                         deleting_key(item["id"])
-                
+
                 redis_jobs.append(partial(pop_remove))
-        
+
         asyncio.create_task(run_redis_jobs(redis_jobs))
-        
 
     @classmethod
     async def poll_due(cls, sync: bool) -> List[Dict[Any, str]]:
@@ -242,20 +247,24 @@ class Dispatcher:
         if not sync or not cls.due_last_poll:
             return list(cls.due_for_polling_notifications)
 
-        def pred(
-            item): return item["notification"]["dispatched"] > cls.due_last_poll
+        def pred(item):
+            return item["notification"]["dispatched"] > cls.due_last_poll
+
         slice = [e for e in cls.due_for_polling_notifications if pred(e)]
-        removing_all_due = [
-            partial(cls.due_for_polling_notifications.pop) for _ in slice]
+        removing_all_due = [partial(cls.due_for_polling_notifications.pop) for _ in slice]
+
         await run_redis_jobs(removing_all_due)
         cls.due_last_poll = datetime.now().timestamp()
+
         return list(slice)
 
     @staticmethod
     async def send(item: Dict[str, Any], testing: bool = True) -> Dict[str, Any]:
         """ Sends a dispatched dispatchable to its final destination. """
         if not testing:
+
             if data := item["requests_options"]["data"]:
                 response = await Session().get(item["requests_options"]["url"], json=data)
                 return {"status": response.status, "item": item}
+
         return {"status_code": 200, "item": item}

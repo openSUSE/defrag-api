@@ -17,7 +17,9 @@
 import asyncio
 from functools import partial, wraps
 from threading import Lock
-from typing import Any, Callable, Iterable, List, Tuple
+from typing import Any, Callable, Iterable, Tuple
+
+from defrag import LOGGER
 
 """
 We want to use `as_async` and `to_async` in all these cases where we need to 
@@ -56,9 +58,9 @@ def as_safe_async(f: Callable) -> Callable:
     return inner
 
 
-async def run_redis_jobs(fs: Iterable) -> Tuple[Any]:
+async def run_redis_jobs(fs: Iterable) -> None:
     g = as_async(lambda: tuple(f() for f in fs))
     try:
-        return await g()
+        await g()
     except Exception as err:
-        print(f"Error while runing redis job:{err}")
+        LOGGER.warn(f"Error while runing redis job:{err}")
