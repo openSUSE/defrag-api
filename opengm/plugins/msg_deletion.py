@@ -10,8 +10,9 @@ from opengm.utils.commands import get_args
 from opengm.utils.plugins import register_plugin
 
 HELP = """
-- /purge: Remove messages
-- /del: remove one message
+- /purge [x]: Reply to a message to delete all messages sent after it. Takes an optional argument x to specify the number of messages to delete.
+- /p [x]: Same as /purge
+- /del: Similar to /purge but only deletes one message.
 """
 register_plugin("Message deletion", HELP)
 
