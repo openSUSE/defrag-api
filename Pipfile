@@ -55,6 +55,7 @@ watchgod = "==0.7"
 websockets = "==10.0"
 yarl = "==1.7.0"
 PyYAML = "==6.0"
+rank-bm25 = "*"
 
 [dev-packages]
 
