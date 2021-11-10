@@ -10,7 +10,6 @@ LOADED = []
 HELPABLE = {}
 HELPABLE_LOWER = {}
 
-
 def register_plugin(plugin_name: str, help_text: str = None):
     if plugin_name not in LOADED:
         LOADED.append(plugin_name)
@@ -42,7 +41,6 @@ async def paginate_plugins(page_n: int, module_dict: Dict, prefix, chat=None) ->
         pairs.append((modules[-1],))
     max_num_pages = ceil(len(pairs) / 7)
     modulo_page = page_n % max_num_pages
-
     # can only have a certain amount of buttons side by side
     if len(pairs) > 7:
         pairs = pairs[modulo_page * 7:7 * (modulo_page + 1)] + [
