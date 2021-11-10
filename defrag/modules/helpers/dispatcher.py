@@ -1,10 +1,9 @@
-from asyncio.tasks import Task, wait_for
-from dataclasses import field
+from asyncio.tasks import Task
+from dataclasses import dataclass
 from datetime import datetime
 from pottery import RedisSet, RedisDict, RedisDeque
-from pydantic import BaseModel
 from functools import partial
-from typing import Any, Coroutine, Dict, Generator, List, Optional, Tuple, Union
+from typing import Any, Coroutine, Dict, Generator, List, NamedTuple, Optional, Tuple, Union
 import asyncio
 
 from defrag import LOGGER
@@ -16,42 +15,79 @@ from defrag.modules.helpers.sync_utils import as_async, run_redis_jobs
 __MODULE_NAME__ = "dispatcher"
 
 
-class Notification(BaseModel):
+@dataclass
+class Notification:
     body: str
     poll_do_not_push: bool
-    dispatched: Optional[float] = None
 
 
+@dataclass
 class EmailNotification(Notification):
     email_address: str
     email_object: str
 
 
+@dataclass
 class MatrixNotification(Notification):
     pass
 
 
+@dataclass
 class TelegramNotification(Notification):
-    user_id: Optional[int]
-    chat_id: Optional[int]
-    bot_endpoint: Optional[str]
+    user_id: int
+    chat_id: int
+    bot_endpoint: str
 
 
-class Dispatchable(BaseModel):
+class Payload(NamedTuple):
     origin: str
     notification: Notification
-    retries: int = 0
-    schedules: List[float] = []
-    id: Optional[int] = None
 
+class Dispatchable:
 
-class HashedDispatchable(Dispatchable):
+    def __init__(
+        self,
+        origin: str,
+        notification: Notification,
+        schedules: List[float] = [],
+    ) -> None:
+        self._payload = Payload(origin, notification)
+        self.schedules = schedules
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.id = abs(hash(datetime.now().timestamp()))
-        self.schedules = sorted(self.schedules, reverse=True)
+class HashedDispatchable:
 
+    def __init__(self, dispatchable: Dispatchable):
+        self._payload = dispatchable._payload
+        self._id = abs(hash(datetime.now().timestamp()))
+        self.schedules = sorted(dispatchable.schedules, reverse=True)
+        self.retries = 0
+        self.dispatched = None
+
+    @property
+    def payload(self):
+        return self._payload
+
+    @payload.setter
+    def payload(self, *args, **kwargs):
+        raise Exception("Immutable payload!")
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, *args, **kwargs):
+        raise Exception("Immutable payload!")
+    
+    def __dict__(self) -> Dict[str, Any]:
+        return {
+            "id": self._id,
+            "origin": self._payload.origin,
+            "notification": self._payload.notification.__dict__,
+            "schedules": self.schedules,
+            "retries": self.retries,
+            "dispatched": self.dispatched
+        }
 
 class Dispatcher:
     """
@@ -112,9 +148,7 @@ class Dispatcher:
         Ensures that the input is a unique dispatchable and puts it into the queue.
         Performance may favor a different way of unpacking the inner dispatchable.
         """
-        item = HashedDispatchable(
-            **dispatchable.dict()
-        ).dict() if isinstance(dispatchable, Dispatchable) else dispatchable
+        item = HashedDispatchable(dispatchable).__dict__() if isinstance(dispatchable, Dispatchable) else dispatchable
 
         if not "id" in item or not item['id']:
             raise Exception("Cannot process items without id!")
@@ -186,7 +220,7 @@ class Dispatcher:
             LOGGER.info(f"Removing {id}")
 
         def polling(item: Dict[str, Any]) -> None:
-            item["notification"]["dispatched"] = datetime.now().timestamp()
+            item["dispatched"] = datetime.now().timestamp()
             cls.due_for_polling_notifications.appendleft(item)
             LOGGER.info(f"Polling {item}")
 
@@ -248,7 +282,7 @@ class Dispatcher:
             return list(cls.due_for_polling_notifications)
 
         def pred(item):
-            return item["notification"]["dispatched"] > cls.due_last_poll
+            return item["dispatched"] > cls.due_last_poll
 
         slice = [e for e in cls.due_for_polling_notifications if pred(e)]
         removing_all_due = [partial(cls.due_for_polling_notifications.pop) for _ in slice]

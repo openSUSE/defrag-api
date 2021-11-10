@@ -1,6 +1,6 @@
 from defrag.modules.db.redis import RedisPool
 from defrag import app
-from defrag.modules.helpers.dispatcher import Dispatcher, Dispatchable, EmailNotification
+from defrag.modules.helpers.dispatcher import Dispatcher, Dispatchable, EmailNotification, HashedDispatchable
 from fastapi.testclient import TestClient
 from datetime import datetime, timedelta
 import pytest
@@ -17,8 +17,7 @@ async def test_Dispatcher():
     notification = EmailNotification(
         poll_do_not_push=True, body="some contents", email_address="to someone", email_object="about something")
     schedules = [(now + timedelta(seconds=n)).timestamp() for n in range(3)]
-    dispatchables = [Dispatchable(
-        id=k, origin="test client", notification=notification, schedules=[s]) for k, s in enumerate(schedules)]
+    dispatchables = [Dispatchable(origin="test client", notification=notification, schedules=[s]) for s in schedules]
     
     Dispatcher.run(dry_run=True)
     
@@ -39,14 +38,21 @@ async def test_poll_due():
     with RedisPool() as conn:
         conn.flushall()
     yesterday = (datetime.now() - timedelta(days=1)).timestamp()
-    notifiers = [Dispatchable(origin="test", notification=EmailNotification(
-        dispatched=datetime.now().timestamp(),
-        poll_do_not_push=True,
-        body="some contents",
-        email_address="to someone",
-        email_object="about something"
-    )).dict() for _ in range(0, 10)
+    notifiers = [
+        HashedDispatchable(
+            Dispatchable(
+                origin="test", notification=EmailNotification(
+                poll_do_not_push=True,
+                body="some contents",
+                email_address="to someone",
+                email_object="about something"
+                )
+            )
+        ).__dict__() for _ in range(0, 10)
     ]
+    
+    for n in notifiers:
+        n["dispatched"] = datetime.now().timestamp()
     
     Dispatcher.due_for_polling_notifications.extendleft(notifiers)
     Dispatcher.due_last_poll = yesterday
