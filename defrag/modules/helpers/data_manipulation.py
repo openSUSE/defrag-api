@@ -130,8 +130,8 @@ def schedule_fairly(
     keys = list(pipes.keys())
     index = 0
     while keys:
+        index = index + 1 if index < len(keys) - 1 else 0
         try:
-            index = index + 1 if index < len(keys) - 1 else 0
             val = next(pipes[keys[index]])
             if filt(val):
                 yield (keys[index], val)
