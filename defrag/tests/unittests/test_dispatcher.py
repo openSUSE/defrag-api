@@ -19,11 +19,17 @@ async def test_Dispatcher():
     schedules = [(now + timedelta(seconds=n)).timestamp() for n in range(3)]
     dispatchables = [Dispatchable(
         id=k, origin="test client", notification=notification, schedules=[s]) for k, s in enumerate(schedules)]
+    
     Dispatcher.run(dry_run=True)
-    await asyncio.gather(*[Dispatcher.put(d) for d in dispatchables])
+    
+    for d in dispatchables:
+        Dispatcher.put(d)
+    
     await asyncio.sleep(6)
+    
     print(
         f"Scheduled: {len(Dispatcher.scheduled)}, Available for polling: {len(Dispatcher.due_for_polling_notifications)}")
+    
     assert len(Dispatcher.due_for_polling_notifications) == len(
         Dispatcher.scheduled) == 3
 
@@ -41,7 +47,9 @@ async def test_poll_due():
         email_object="about something"
     )).dict() for _ in range(0, 10)
     ]
+    
     Dispatcher.due_for_polling_notifications.extendleft(notifiers)
     Dispatcher.due_last_poll = yesterday
+    
     polled = await Dispatcher.poll_due(True)
     assert len(polled) == len(notifiers)

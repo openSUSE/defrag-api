@@ -107,7 +107,7 @@ class Dispatcher:
             raise Exception(f"Failed to cancel the handler for some worker")
 
     @classmethod
-    async def put(cls, dispatchable: Union[Dispatchable, Dict[str, Any]]) -> int:
+    def put(cls, dispatchable: Union[Dispatchable, Dict[str, Any]]) -> int:
         """ 
         Ensures that the input is a unique dispatchable and puts it into the queue.
         Performance may favor a different way of unpacking the inner dispatchable.
@@ -219,7 +219,7 @@ class Dispatcher:
                 if response["item"]["retries"] < 2:
                     await as_async(LOGGER.warning)(f"item sending timed out. Retrying soon.")
                     item["retries"] += 1
-                    await cls.put(item)
+                    cls.put(item)
 
                 else:
                     LOGGER.warning(
