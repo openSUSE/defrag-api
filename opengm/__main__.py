@@ -1,6 +1,8 @@
 import logging
 from sys import exit
+
 from decouple import config
+
 from .opengm import Opengm
 
 logging.basicConfig(
