@@ -1,7 +1,7 @@
 from typing import Optional, Union
 from redis import Redis, BlockingConnectionPool
 from redis.client import Pipeline
-from defrag import config, LOGGER
+from defrag import REDIS_HOST, REDIS_PORT, REDIS_PWD, LOGGER
 
 """ 
 Using `BlockingConnectionPool` instead of the default
@@ -24,9 +24,9 @@ class RedisPool:
         if not cls.pool:
             LOGGER.debug("Opening pool...")
             cls.pool = BlockingConnectionPool(
-                host=config["REDIS_HOST"],
-                port=config["REDIS_PORT"],
-                password=config["REDIS_PWD"],
+                host=REDIS_HOST,
+                port=REDIS_PORT,
+                password=REDIS_PWD,
             )
 
     @classmethod

@@ -1,4 +1,4 @@
-from defrag import app
+from defrag import app, LOGGER
 from defrag.modules.helpers.services_manager import ServiceTemplate, ServicesManager
 from defrag.modules.helpers.requests import Req
 from defrag.modules.helpers import Query, QueryResponse
@@ -11,6 +11,8 @@ import asyncio
 import json
 import sys
 from typing import Any, Dict, List, Tuple
+from fastapi import Response, status
+
 
 __MOD_NAME__ = "documentation"
 
@@ -27,14 +29,17 @@ indexes = {
         "url": "https://doc.opensuse.org/documentation/leap/reference/single-html/book-reference/index.html",
         "index": None,
     },
-    "tumbleweed": {
-        "url": "https://raw.githubusercontent.com/openSUSE/openSUSE-docs-revamped-temp/gh-pages/search/search_index.json",
-        "index": None
+    # Let's disable the revamped docs for now
+   "tumbleweed": {
+         "url": "",
+         "index": None
     }
 }
 
 
 async def get_data(source: str) -> Any:
+    if source == "tumbleweed":
+        return None
     async with Req(indexes[source]["url"]) as result:
         if source == "tumbleweed":
             return await result.read()
@@ -106,19 +111,18 @@ def make_index_search_tumbleweed(tw_data: bytes, keywords: str) -> Tuple[Index, 
 
 
 async def make_search_set_indexes_in_parallel(keywords: str) -> List[Dict[str, Any]]:
-
     leap, tw = await asyncio.gather(get_data("leap"), get_data("tumbleweed"))
     sys.setrecursionlimit(0x100000)
     with ProcessPoolExecutor(max_workers=2) as executor:
         leap_worker = executor.submit(
             make_index_search_leap, **{"leap_data": leap, "keywords": keywords})
-        tw_worker = executor.submit(
-            make_index_search_tumbleweed, **{"tw_data": tw, "keywords": keywords})
+        #tw_worker = executor.submit(
+        #    make_index_search_tumbleweed, **{"tw_data": tw, "keywords": keywords})
         leap_index, leap_results = leap_worker.result()
-        tw_index, tw_results = tw_worker.result()
+        #tw_index, tw_results = tw_worker.result()
         set_global_index("leap", leap_index)
-        set_global_index("tumbleweed", tw_index)
-        return leap_results + tw_results
+        #set_global_index("tumbleweed", tw_index)
+        return leap_results
 
 
 def search_indexes_in_parallel(keywords: str) -> List[Dict[str, Any]]:
@@ -127,29 +131,33 @@ def search_indexes_in_parallel(keywords: str) -> List[Dict[str, Any]]:
             search_index, **{"idx": indexes["leap"]["index"], "source": "leap", "keywords": keywords})
         tw_worker = executor.submit(
             search_index, **{"idx": indexes["tumbleweed"]["index"], "source": "tumbleweed", "keywords": keywords})
-        return leap_worker.result() + tw_worker.result()
+        return leap_worker.result()# + tw_worker.result()
 
 
 @app.get("/" + __MOD_NAME__ + "/single/{source}/")
-async def search_single_source_docs(source: str, keywords: str) -> QueryResponse:
+async def search_single_source_docs(source: str, keywords: str, response: Response) -> QueryResponse:
+    if source == "tumbleweed":
+       # set_global_index("tumbleweed", make_tumbleweed_index(await get_data(source)))
+        response.status_code = status.HTTP_410_GONE
+        return "HTTP 410: Gone - Searching the revamped docs is disabled."
     if not ready_to_index([source]):
-        if source == "tumbleweed":
-            set_global_index("tumbleweed", make_tumbleweed_index(await get_data(source)))
-        else:
+        if source == "leap":
             set_global_index("leap", make_leap_index(await get_data(source)))
+        else:
+            return "What are you doing?!"
     results = sorted_on_score(search_index(
         indexes[source]["index"], source, keywords))
     return QueryResponse(query=Query(service="search_docs"), results_count=len(results), results=results)
 
 
-@app.get("/" + __MOD_NAME__ + "/merged/")
-async def search(keywords: str) -> QueryResponse:
-    if not ready_to_index(["leap", "tumbleweed"]):
-        results = await make_search_set_indexes_in_parallel(keywords)
-        return QueryResponse(query=Query(service="search_docs"), results_count=len(results), results=results)
-    else:
-        results = sorted_on_score(search_indexes_in_parallel(keywords))
-        return QueryResponse(query=Query(service="search_docs"), results_count=len(results), results=results)
+#@app.get("/" + __MOD_NAME__ + "/merged/")
+#async def search(keywords: str) -> QueryResponse:
+#    if not ready_to_index(["leap", "tumbleweed"]):
+#        results = await make_search_set_indexes_in_parallel(keywords)
+#        return QueryResponse(query=Query(service="search_docs"), results_count=len(results), results=results)
+#    else:
+#        results = sorted_on_score(search_indexes_in_parallel(keywords))
+#        return QueryResponse(query=Query(service="search_docs"), results_count=len(results), results=results)
 
 
 def register_service():
