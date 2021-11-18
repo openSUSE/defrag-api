@@ -5,7 +5,7 @@ from .opengm import Opengm
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.getLevelName(config("LOG_LEVEL", default="INFO")),
+    level=logging.getLevelName(config("LOG_LEVEL", default="DEBUG")),
 )
 
 try:
