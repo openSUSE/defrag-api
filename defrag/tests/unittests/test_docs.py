@@ -30,7 +30,14 @@ def test_single_endpoint():
     assert results
 
 
-def test_merged_endpoint():
+# Merged docs are currently disabled
+#def test_single_endpoint():
+#   response = client.get("/documentation/single/leap/?keywords=zypper")
+#    response = client.get("/docs/search/single/leap/?keywords=zypper")
+#    assert response.status_code == 200
+#    results = response.json()["results"]
+#    print(results)
+#    assert results
     response = client.get("/docs/search/merged/?keywords=zypper")
     assert response.status_code == 200
     results = response.json()["results"]
