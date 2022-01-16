@@ -132,20 +132,6 @@ async def bot_added_to_group(bot: Client, update: ChatMemberUpdated):
     await reload_admins(update.chat.id, bot)
 
 
-# Helps debugging
-@Opengm.on_message(filters.group & filters.command("admins"))
-async def list_admins(bot: Client, msg: Message):
-    chat = msg.chat
-    if chat.id in admins:
-        alist = admins[chat.id]
-        reply = f"List of Admins in {chat.title}:\n"
-        for admin in alist:
-            reply = reply + f" - {(await bot.get_chat_member(chat.id, admin)).user.mention}\n"
-        await msg.reply_text(reply)
-    else:
-        await msg.reply_text("There are no admins in this chat, this can't be right... Please do /reload!")
-
-
 @Opengm.on_message(command("extract"))
 @user_admin
 async def promote(bot: Client, msg: Message) -> None:
