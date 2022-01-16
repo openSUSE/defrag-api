@@ -69,10 +69,10 @@ async def help_button_callback(cl: Client, query: CallbackQuery) -> None:
         await query.message.reply(HELPTEXT.format("Test"), reply_markup=InlineKeyboardMarkup(inline_keyboard=await paginate_plugins(0, HELPABLE, "help")))
     elif prev_match:
         curr_page = int(prev_match.group(1))
-        await query.message.reply(HELPTEXT, reply_markup=InlineKeyboardMarkup(paginate_modules(curr_page - 1, HELPABLE, "help")))
+        await query.message.reply(HELPTEXT, reply_markup=InlineKeyboardMarkup(await paginate_plugins(curr_page - 1, HELPABLE, "help")))
     elif next_match:
         next_page = int(next_match.group(1))
-        await query.message.reply(HELPTEXT, reply_markup=InlineKeyboardMarkup(paginate_modules(next_page + 1, HELPABLE, "help")))
+        await query.message.reply(HELPTEXT, reply_markup=InlineKeyboardMarkup(await paginate_plugins(next_page + 1, HELPABLE, "help")))
     await query.answer()
 
 # Put a list of all admins in a chat to Redis
