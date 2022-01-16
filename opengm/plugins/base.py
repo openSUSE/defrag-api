@@ -4,6 +4,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, CallbackQuery, InlineKeyboardButton, ChatMemberUpdated
 from opengm.opengm import Opengm, command
 from opengm.utils.chat_status import user_admin, admins
+from opengm.utils.extraction import extract_user_and_text
 from opengm.utils.plugins import HELPABLE, HELPABLE_LOWER, paginate_plugins
 from opengm.utils.commands import get_args
 
@@ -144,3 +145,11 @@ async def list_admins(bot: Client, msg: Message):
     else:
         await msg.reply_text("There are no admins in this chat, this can't be right... Please do /reload!")
 
+
+@Opengm.on_message(command("extract"))
+@user_admin
+async def promote(bot: Client, msg: Message) -> None:
+    args = get_args(msg)
+    chat_id = msg.chat.id
+    chat = msg.chat
+    await msg.reply_text(await extract_user_and_text(msg))
