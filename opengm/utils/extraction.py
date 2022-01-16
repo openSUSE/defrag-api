@@ -78,3 +78,8 @@ async def extract_user_and_text(msg: Message):
     else:
         return None, None
     return user_id, text
+
+
+async def extract_user(msg: Message):
+    user, text = await extract_user_and_text(msg)
+    return user
