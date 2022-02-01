@@ -1,7 +1,5 @@
-from pyrogram.types import Message
 from pyrogram import filters
-
-username = ""
+from pyrogram.types import Message
 
 
 def get_args(msg: Message):

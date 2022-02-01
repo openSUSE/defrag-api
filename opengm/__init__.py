@@ -1,6 +1,6 @@
 import configparser
-from redis import Redis, BlockingConnectionPool
 
+from redis import BlockingConnectionPool, Redis
 
 config = configparser.ConfigParser()
 config.read(["config.ini", "opengm.ini", "opensuse.ini"])
@@ -10,4 +10,5 @@ REDIS_PWD = config["REDIS"]["REDIS_PWD"]
 DATABASE_URL = config["postgres"]["database_url"]
 LOG_LEVEL = config["logging"]["log_level"]
 pool = BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PWD)
+
 redis = Redis(connection_pool=pool)

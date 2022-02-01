@@ -1,5 +1,6 @@
 import logging
 from sys import exit
+
 from decouple import config
 from opengm.__init__ import LOG_LEVEL
 from .opengm import Opengm

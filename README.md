@@ -35,7 +35,7 @@ _Cross-platform (Matrix, Telegram) moderation_ (depends on: https://github.com/o
 - - [x] search openSUSE documentation
 - - [ ] search Factory + Pre-Factory packages with zypper + opi
 - - [ ] search for Progress / Pagure
-- - [ ] search for people/activities/events
+- - [ ] search for activities/events
 
 ## How to deploy?
 Please see [deploying.md](deploying.md) for information on how to deploy the project.
