@@ -52,8 +52,7 @@ async def promote_user(bot: Client, msg: Message):
                                   can_pin_messages=bot_member.can_pin_messages,
                                   can_manage_voice_chats=bot_member.can_manage_voice_chats,
                                   can_manage_chat=bot_member.can_manage_chat,
-                                  can_edit_messages=bot_member.can_edit_messages,
-                                  can_promote_members=bot_member.can_promote_members)
+                                  can_edit_messages=bot_member.can_edit_messages)
     await msg.reply_text(f"User {user_member.user.mention} has been promoted.", parse_mode="html")
 
 
