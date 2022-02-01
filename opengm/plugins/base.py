@@ -7,7 +7,9 @@ from pyrogram.types import (CallbackQuery, ChatMemberUpdated,
                             Message)
 
 from opengm.opengm import Opengm, command
-from opengm.utils.chat_status import admins, user_admin
+from opengm.utils.chat_status import user_admin, admins
+from opengm.utils.extraction import extract_user_and_text
+from opengm.utils.plugins import HELPABLE, HELPABLE_LOWER, paginate_plugins
 from opengm.utils.commands import get_args
 from opengm.utils.plugins import HELPABLE, HELPABLE_LOWER, paginate_plugins
 
@@ -72,10 +74,10 @@ async def help_button_callback(cl: Client, query: CallbackQuery) -> None:
         await query.message.reply(HELPTEXT.format("Test"), reply_markup=InlineKeyboardMarkup(inline_keyboard=await paginate_plugins(0, HELPABLE, "help")))
     elif prev_match:
         curr_page = int(prev_match.group(1))
-        await query.message.reply(HELPTEXT, reply_markup=InlineKeyboardMarkup(paginate_modules(curr_page - 1, HELPABLE, "help")))
+        await query.message.reply(HELPTEXT, reply_markup=InlineKeyboardMarkup(await paginate_plugins(curr_page - 1, HELPABLE, "help")))
     elif next_match:
         next_page = int(next_match.group(1))
-        await query.message.reply(HELPTEXT, reply_markup=InlineKeyboardMarkup(paginate_modules(next_page + 1, HELPABLE, "help")))
+        await query.message.reply(HELPTEXT, reply_markup=InlineKeyboardMarkup(await paginate_plugins(next_page + 1, HELPABLE, "help")))
     await query.answer()
 
 # Put a list of all admins in a chat to Redis
@@ -135,15 +137,10 @@ async def bot_added_to_group(bot: Client, update: ChatMemberUpdated):
     await reload_admins(update.chat.id, bot)
 
 
-# Helps debugging
-@Opengm.on_message(filters.group & filters.command("admins"))
-async def list_admins(bot: Client, msg: Message):
+@Opengm.on_message(command("extract"))
+@user_admin
+async def promote(bot: Client, msg: Message) -> None:
+    args = get_args(msg)
+    chat_id = msg.chat.id
     chat = msg.chat
-    if chat.id in admins:
-        alist = admins[chat.id]
-        reply = f"List of Admins in {chat.title}:\n"
-        for admin in alist:
-            reply = reply + f" - {(await bot.get_chat_member(chat.id, admin)).user.mention}\n"
-        await msg.reply_text(reply)
-    else:
-        await msg.reply_text("There are no admins in this chat, this can't be right... Please do /reload!")
+    await msg.reply_text(await extract_user_and_text(msg))

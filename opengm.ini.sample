@@ -2,3 +2,9 @@
 api_id =
 api_hash =
 bot_token =
+
+[postgres]
+database_url = postgresql+asyncpg://bot:password@host:5432/bot-devel
+
+[logging]
+log_level = DEBUG
